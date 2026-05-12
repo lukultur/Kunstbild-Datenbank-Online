@@ -39,6 +39,12 @@ if "eingeloggt" not in st.session_state:
 if "seite" not in st.session_state:
     st.session_state["seite"] = "Archiv durchsuchen"
 
+if "ansicht" not in st.session_state:
+    st.session_state["ansicht"] = "Galerieansicht"
+
+if "ausgewaehlte_rowid" not in st.session_state:
+    st.session_state["ausgewaehlte_rowid"] = None
+
 if not st.session_state["eingeloggt"]:
     login_pruefen()
     st.stop()
@@ -284,6 +290,7 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
                 gespeichert += 1
 
             st.session_state["seite"] = "Archiv durchsuchen"
+            st.session_state["ansicht"] = "Galerieansicht"
             st.success(f"{gespeichert} Bilder gespeichert.")
             st.rerun()
 
@@ -366,7 +373,10 @@ else:
         "Ansicht",
         ["Galerieansicht", "Detailansicht"],
         horizontal=True,
+        index=0 if st.session_state["ansicht"] == "Galerieansicht" else 1,
     )
+
+    st.session_state["ansicht"] = ansicht
 
     if ansicht == "Galerieansicht":
         for start in range(0, len(gefiltert), 3):
@@ -386,6 +396,14 @@ else:
                             vorschau = vorschaubild_erzeugen(bild)
 
                             st.image(vorschau, width=260)
+
+                            if st.button(
+                                "Groß anzeigen",
+                                key=f"gross_{row['rowid']}",
+                            ):
+                                st.session_state["ausgewaehlte_rowid"] = int(row["rowid"])
+                                st.session_state["ansicht"] = "Detailansicht"
+                                st.rerun()
 
                             with open(bildpfad, "rb") as file:
                                 st.download_button(
@@ -411,20 +429,43 @@ else:
         if len(auswahl_liste) == 0:
             st.info("Keine Einträge gefunden.")
         else:
-            auswahl = st.selectbox("Werk auswählen", auswahl_liste)
+            vorauswahl_index = 0
+
+            if st.session_state["ausgewaehlte_rowid"] is not None:
+                for idx, row_check in gefiltert.iterrows():
+                    if int(row_check["rowid"]) == int(st.session_state["ausgewaehlte_rowid"]):
+                        vorauswahl_index = idx
+                        break
+
+            auswahl = st.selectbox(
+                "Werk auswählen",
+                auswahl_liste,
+                index=vorauswahl_index,
+            )
+
             index = auswahl_liste.index(auswahl)
 
             row = gefiltert.iloc[index]
             rowid = int(row["rowid"])
 
+            st.session_state["ausgewaehlte_rowid"] = rowid
+
             bildpfad = IMAGE_DIR / str(row["Dateiname"])
 
-            col1, col2 = st.columns([1, 2])
+            if st.button("Zurück zur Galerie"):
+                st.session_state["ansicht"] = "Galerieansicht"
+                st.rerun()
+
+            col1, col2 = st.columns([1.4, 1])
 
             with col1:
                 if bildpfad.exists():
                     bild = bild_laden(bildpfad)
-                    st.image(bild, width=420)
+
+                    st.image(
+                        bild,
+                        use_container_width=True,
+                    )
 
                     with open(bildpfad, "rb") as file:
                         st.download_button(
