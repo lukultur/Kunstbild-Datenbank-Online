@@ -28,6 +28,7 @@ def login_pruefen():
     if eingabe == PASSWORT:
         st.session_state["eingeloggt"] = True
         st.rerun()
+
     elif eingabe:
         st.error("Falsches Passwort.")
 
@@ -64,20 +65,22 @@ def daten_laden():
 
 def excel_export_erzeugen(df):
     export_df = df.drop(columns=["rowid"], errors="ignore")
+
     output = BytesIO()
 
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         export_df.to_excel(writer, index=False, sheet_name="Kunstbilder")
 
     output.seek(0)
+
     return output
 
 
 def datensatz_speichern(daten):
-    backup_erstellen()
 
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
+
     cursor.execute(
         """
         INSERT INTO kunstbilder
@@ -98,15 +101,18 @@ def datensatz_speichern(daten):
             daten["Bildpfad"],
         ),
     )
+
     conn.commit()
     conn.close()
 
 
 def datensatz_aktualisieren(rowid, daten):
+
     backup_erstellen()
 
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
+
     cursor.execute(
         """
         UPDATE kunstbilder
@@ -134,17 +140,20 @@ def datensatz_aktualisieren(rowid, daten):
             rowid,
         ),
     )
+
     conn.commit()
     conn.close()
 
 
 def datensatz_loeschen(rowid, dateiname, bildpfad):
+
     backup_erstellen()
 
     echter_bildpfad = IMAGE_DIR / str(dateiname)
 
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
+
     cursor.execute(
         """
         DELETE FROM kunstbilder
@@ -154,6 +163,7 @@ def datensatz_loeschen(rowid, dateiname, bildpfad):
         """,
         (rowid, str(dateiname), str(bildpfad)),
     )
+
     conn.commit()
     conn.close()
 
@@ -162,15 +172,23 @@ def datensatz_loeschen(rowid, dateiname, bildpfad):
 
 
 def bild_laden(bildpfad):
+
     bild = Image.open(bildpfad)
     bild = ImageOps.exif_transpose(bild)
+
     return bild
 
 
 def vorschaubild_erzeugen(bild, ziel_breite=260, ziel_hoehe=260):
+
     bild = bild.copy()
     bild.thumbnail((ziel_breite, ziel_hoehe))
-    hintergrund = Image.new("RGB", (ziel_breite, ziel_hoehe), "white")
+
+    hintergrund = Image.new(
+        "RGB",
+        (ziel_breite, ziel_hoehe),
+        "white"
+    )
 
     x = (ziel_breite - bild.width) // 2
     y = (ziel_hoehe - bild.height) // 2
@@ -184,23 +202,32 @@ def vorschaubild_erzeugen(bild, ziel_breite=260, ziel_hoehe=260):
 
 
 def kurzer_titel(text, max_laenge=18):
+
     text = str(text)
+
     if len(text) > max_laenge:
         return text[:max_laenge] + "..."
+
     return text
 
 
-tab1, tab2 = st.tabs(["Archiv durchsuchen", "Neues Bild hinzufügen"])
+tab1, tab2 = st.tabs(
+    [
+        "Archiv durchsuchen",
+        "Neues Bild hinzufügen"
+    ]
+)
 
 
 with tab2:
-    st.header("Neues Bild hinzufügen")
+
+    st.header("Neue Bilder hinzufügen")
 
     uploaded_files = st.file_uploader(
-    "Bilddateien auswählen",
-    type=["jpg", "jpeg", "png", "webp", "tif", "tiff"],
-    accept_multiple_files=True
-)
+        "Bilddateien auswählen",
+        type=["jpg", "jpeg", "png", "webp", "tif", "tiff"],
+        accept_multiple_files=True
+    )
 
     kuenstler_neu = st.text_input("Künstler")
     titel_neu = st.text_input("Titel")
@@ -213,111 +240,136 @@ with tab2:
     schlagworte_neu = st.text_input("Schlagworte")
 
     if uploaded_files:
-    st.write(f"{len(uploaded_files)} Bilddatei(en) ausgewählt")
 
-    vorschau_spalten = st.columns(4)
+        st.write(f"{len(uploaded_files)} Bilddatei(en) ausgewählt")
 
-    for index, datei in enumerate(uploaded_files):
+        vorschau_spalten = st.columns(4)
 
-        with vorschau_spalten[index % 4]:
-            st.image(datei, width=150)
-            st.caption(datei.name)
+        for index, datei in enumerate(uploaded_files):
+
+            with vorschau_spalten[index % 4]:
+
+                st.image(datei, width=150)
+                st.caption(datei.name)
 
     if st.button("Bilder und Datensätze speichern"):
+
         if not uploaded_files:
-    st.error("Bitte zuerst Bilddateien auswählen.")
-        elif not titel_neu:
-            st.error("Bitte mindestens einen Titel eingeben.")
-       else:
 
-    backup_erstellen()
+            st.error("Bitte zuerst Bilddateien auswählen.")
 
-    gespeichert = 0
+        else:
 
-    for uploaded_file in uploaded_files:
+            backup_erstellen()
 
-        original_name = uploaded_file.name
-        zielpfad = IMAGE_DIR / original_name
+            gespeichert = 0
 
-        counter = 1
+            for uploaded_file in uploaded_files:
 
-        while zielpfad.exists():
+                original_name = uploaded_file.name
+                zielpfad = IMAGE_DIR / original_name
 
-            stem = Path(original_name).stem
-            suffix = Path(original_name).suffix
+                counter = 1
 
-            zielpfad = IMAGE_DIR / f"{stem}_{counter}{suffix}"
+                while zielpfad.exists():
 
-            counter += 1
+                    stem = Path(original_name).stem
+                    suffix = Path(original_name).suffix
 
-        with open(zielpfad, "wb") as f:
-            shutil.copyfileobj(uploaded_file, f)
+                    zielpfad = IMAGE_DIR / f"{stem}_{counter}{suffix}"
 
-        daten = {
-            "Dateiname": zielpfad.name,
-            "Künstler": kuenstler_neu,
-            "Titel": titel_neu if titel_neu else zielpfad.stem,
-            "Jahr": jahr_neu,
-            "Technik": technik_neu,
-            "Maße": masse_neu,
-            "Standort": standort_neu,
-            "Rechte": rechte_neu,
-            "Beschreibung": beschreibung_neu,
-            "Schlagworte": schlagworte_neu,
-            "Bildpfad": str(zielpfad),
-        }
+                    counter += 1
 
-        datensatz_speichern(daten)
+                with open(zielpfad, "wb") as f:
+                    shutil.copyfileobj(uploaded_file, f)
 
-        gespeichert += 1
+                daten = {
+                    "Dateiname": zielpfad.name,
+                    "Künstler": kuenstler_neu,
+                    "Titel": titel_neu if titel_neu else zielpfad.stem,
+                    "Jahr": jahr_neu,
+                    "Technik": technik_neu,
+                    "Maße": masse_neu,
+                    "Standort": standort_neu,
+                    "Rechte": rechte_neu,
+                    "Beschreibung": beschreibung_neu,
+                    "Schlagworte": schlagworte_neu,
+                    "Bildpfad": str(zielpfad),
+                }
 
-    st.success(f"{gespeichert} Bilder gespeichert.")
+                datensatz_speichern(daten)
 
-    st.rerun()
+                gespeichert += 1
+
+            st.success(f"{gespeichert} Bilder gespeichert.")
+
+            st.rerun()
 
 
 with tab1:
+
     df = daten_laden()
 
     st.sidebar.header("Filter")
 
     suchbegriff = st.sidebar.text_input("Freie Suche")
 
-    kuenstler_liste = ["Alle"] + sorted(df["Künstler"].astype(str).unique().tolist())
-    kuenstler_filter = st.sidebar.selectbox("Künstler", kuenstler_liste)
+    kuenstler_liste = ["Alle"] + sorted(
+        df["Künstler"].astype(str).unique().tolist()
+    )
+
+    kuenstler_filter = st.sidebar.selectbox(
+        "Künstler",
+        kuenstler_liste
+    )
 
     sortierung = st.sidebar.selectbox(
         "Sortieren nach",
-        ["Titel", "Künstler", "Jahr", "Technik"],
+        ["Titel", "Künstler", "Jahr", "Technik"]
     )
 
     gefiltert = df.copy()
 
     if suchbegriff:
+
         suchbegriff = suchbegriff.lower()
+
         gefiltert = gefiltert[
             gefiltert.astype(str)
-            .apply(lambda row: row.str.lower().str.contains(suchbegriff).any(), axis=1)
+            .apply(
+                lambda row: row.str.lower().str.contains(suchbegriff).any(),
+                axis=1
+            )
         ]
 
     if kuenstler_filter != "Alle":
+
         gefiltert = gefiltert[
             gefiltert["Künstler"].astype(str) == kuenstler_filter
         ]
 
     if sortierung in gefiltert.columns:
-        gefiltert = gefiltert.sort_values(by=sortierung, ascending=True)
+
+        gefiltert = gefiltert.sort_values(
+            by=sortierung,
+            ascending=True
+        )
 
     gefiltert = gefiltert.reset_index(drop=True)
 
     st.write(f"**{len(gefiltert)} Einträge gefunden**")
 
     export_excel = excel_export_erzeugen(gefiltert)
-    export_csv = gefiltert.drop(columns=["rowid"], errors="ignore").to_csv(index=False).encode("utf-8-sig")
+
+    export_csv = gefiltert.drop(
+        columns=["rowid"],
+        errors="ignore"
+    ).to_csv(index=False).encode("utf-8-sig")
 
     col_export1, col_export2 = st.columns([1, 1])
 
     with col_export1:
+
         st.download_button(
             label="Trefferliste als Excel herunterladen",
             data=export_excel,
@@ -326,6 +378,7 @@ with tab1:
         )
 
     with col_export2:
+
         st.download_button(
             label="Trefferliste als CSV herunterladen",
             data=export_csv,
@@ -340,24 +393,34 @@ with tab1:
     )
 
     if ansicht == "Galerieansicht":
+
         for start in range(0, len(gefiltert), 3):
+
             spalten = st.columns(3)
 
             for i in range(3):
+
                 if start + i >= len(gefiltert):
                     continue
 
                 row = gefiltert.iloc[start + i]
+
                 bildpfad = IMAGE_DIR / str(row["Dateiname"])
 
                 with spalten[i]:
+
                     with st.container(border=True):
+
                         if bildpfad.exists():
+
                             bild = bild_laden(bildpfad)
+
                             vorschau = vorschaubild_erzeugen(bild)
+
                             st.image(vorschau, width=260)
 
                             with open(bildpfad, "rb") as file:
+
                                 st.download_button(
                                     label="Bild herunterladen",
                                     data=file,
@@ -365,25 +428,45 @@ with tab1:
                                     mime="application/octet-stream",
                                     key=f"download_{row['rowid']}",
                                 )
+
                         else:
+
                             st.warning("Bild nicht gefunden")
 
-                        st.markdown(f"### {kurzer_titel(row.get('Titel', ''))}")
-                        st.write(f"**Künstler:** {row.get('Künstler', '')}")
-                        st.write(f"**Jahr:** {row.get('Jahr', '')}")
+                        st.markdown(
+                            f"### {kurzer_titel(row.get('Titel', ''))}"
+                        )
+
+                        st.write(
+                            f"**Künstler:** {row.get('Künstler', '')}"
+                        )
+
+                        st.write(
+                            f"**Jahr:** {row.get('Jahr', '')}"
+                        )
 
     else:
+
         auswahl_liste = [
             f"{row.get('Künstler', '')} – {row.get('Titel', '')} [{row.get('rowid', '')}]"
             for _, row in gefiltert.iterrows()
         ]
 
         if len(auswahl_liste) == 0:
+
             st.info("Keine Einträge gefunden.")
+
         else:
-            auswahl = st.selectbox("Werk auswählen", auswahl_liste)
+
+            auswahl = st.selectbox(
+                "Werk auswählen",
+                auswahl_liste
+            )
+
             index = auswahl_liste.index(auswahl)
+
             row = gefiltert.iloc[index]
+
             rowid = int(row["rowid"])
 
             bildpfad = IMAGE_DIR / str(row["Dateiname"])
@@ -391,11 +474,15 @@ with tab1:
             col1, col2 = st.columns([1, 2])
 
             with col1:
+
                 if bildpfad.exists():
+
                     bild = bild_laden(bildpfad)
+
                     st.image(bild, width=420)
 
                     with open(bildpfad, "rb") as file:
+
                         st.download_button(
                             label="Bild herunterladen",
                             data=file,
@@ -403,10 +490,13 @@ with tab1:
                             mime="application/octet-stream",
                             key=f"detail_download_{rowid}",
                         )
+
                 else:
+
                     st.warning(f"Bild nicht gefunden: {bildpfad}")
 
             with col2:
+
                 st.header(str(row.get("Titel", "")))
 
                 st.write(f"**Künstler:** {row.get('Künstler', '')}")
@@ -422,20 +512,60 @@ with tab1:
                 st.divider()
 
                 with st.expander("Datensatz bearbeiten"):
-                    with st.form(key=f"bearbeiten_form_{rowid}"):
-                        bearb_kuenstler = st.text_input("Künstler", value=str(row.get("Künstler", "")))
-                        bearb_titel = st.text_input("Titel", value=str(row.get("Titel", "")))
-                        bearb_jahr = st.text_input("Jahr", value=str(row.get("Jahr", "")))
-                        bearb_technik = st.text_input("Technik", value=str(row.get("Technik", "")))
-                        bearb_masse = st.text_input("Maße", value=str(row.get("Maße", "")))
-                        bearb_standort = st.text_input("Standort", value=str(row.get("Standort", "")))
-                        bearb_rechte = st.text_input("Rechte", value=str(row.get("Rechte", "")))
-                        bearb_beschreibung = st.text_area("Beschreibung", value=str(row.get("Beschreibung", "")))
-                        bearb_schlagworte = st.text_input("Schlagworte", value=str(row.get("Schlagworte", "")))
 
-                        speichern = st.form_submit_button("Änderungen speichern")
+                    with st.form(key=f"bearbeiten_form_{rowid}"):
+
+                        bearb_kuenstler = st.text_input(
+                            "Künstler",
+                            value=str(row.get("Künstler", "")),
+                        )
+
+                        bearb_titel = st.text_input(
+                            "Titel",
+                            value=str(row.get("Titel", "")),
+                        )
+
+                        bearb_jahr = st.text_input(
+                            "Jahr",
+                            value=str(row.get("Jahr", "")),
+                        )
+
+                        bearb_technik = st.text_input(
+                            "Technik",
+                            value=str(row.get("Technik", "")),
+                        )
+
+                        bearb_masse = st.text_input(
+                            "Maße",
+                            value=str(row.get("Maße", "")),
+                        )
+
+                        bearb_standort = st.text_input(
+                            "Standort",
+                            value=str(row.get("Standort", "")),
+                        )
+
+                        bearb_rechte = st.text_input(
+                            "Rechte",
+                            value=str(row.get("Rechte", "")),
+                        )
+
+                        bearb_beschreibung = st.text_area(
+                            "Beschreibung",
+                            value=str(row.get("Beschreibung", "")),
+                        )
+
+                        bearb_schlagworte = st.text_input(
+                            "Schlagworte",
+                            value=str(row.get("Schlagworte", "")),
+                        )
+
+                        speichern = st.form_submit_button(
+                            "Änderungen speichern"
+                        )
 
                     if speichern:
+
                         neue_daten = {
                             "Künstler": bearb_kuenstler,
                             "Titel": bearb_titel,
@@ -449,7 +579,9 @@ with tab1:
                         }
 
                         datensatz_aktualisieren(rowid, neue_daten)
+
                         st.success("Änderungen wurden gespeichert.")
+
                         st.rerun()
 
                 st.divider()
@@ -459,14 +591,26 @@ with tab1:
                     key=f"loeschen_check_{rowid}",
                 )
 
-                if st.button("Datensatz löschen", type="primary", key=f"loeschen_{rowid}"):
+                if st.button(
+                    "Datensatz löschen",
+                    type="primary",
+                    key=f"loeschen_{rowid}"
+                ):
+
                     if loeschen_bestaetigen:
+
                         datensatz_loeschen(
                             rowid,
                             row["Dateiname"],
                             row["Bildpfad"],
                         )
+
                         st.success("Datensatz wurde gelöscht.")
+
                         st.rerun()
+
                     else:
-                        st.error("Bitte zuerst die Löschung bestätigen.")
+
+                        st.error(
+                            "Bitte zuerst die Löschung bestätigen."
+                        )
