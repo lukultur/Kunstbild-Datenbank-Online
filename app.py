@@ -2,10 +2,13 @@ import streamlit as st
 import pandas as pd
 import sqlite3
 import shutil
+import base64
+import json
 from pathlib import Path
 from datetime import datetime
 from io import BytesIO
 from PIL import Image, ImageOps
+from openai import OpenAI
 
 BASE_DIR = Path(__file__).parent
 DB_FILE = BASE_DIR / "kunstbilder.db"
@@ -23,7 +26,6 @@ st.set_page_config(page_title="Kunstbild-Datenbank", layout="wide")
 def login_pruefen():
     st.title("Kunstbild-Datenbank")
     st.subheader("Geschützter Zugang")
-
     eingabe = st.text_input("Passwort eingeben", type="password")
 
     if eingabe == PASSWORT:
@@ -51,7 +53,7 @@ if not st.session_state["eingeloggt"]:
 
 
 st.title("Kunstbild-Datenbank")
-st.caption("Recherche, Vorschau, Upload, Export und Verwaltung deiner Kunstbilder")
+st.caption("Recherche, Vorschau, Upload, Export, KI-Analyse und Verwaltung deiner Kunstbilder")
 
 
 def backup_erstellen():
@@ -201,6 +203,82 @@ def kurzer_titel(text, max_laenge=18):
         return text[:max_laenge] + "..."
 
     return text
+
+
+def bild_als_base64_data_url(bildpfad):
+    suffix = bildpfad.suffix.lower()
+
+    if suffix in [".jpg", ".jpeg"]:
+        mime_type = "image/jpeg"
+    elif suffix == ".png":
+        mime_type = "image/png"
+    elif suffix == ".webp":
+        mime_type = "image/webp"
+    else:
+        bild = bild_laden(bildpfad)
+        temp_buffer = BytesIO()
+        bild.save(temp_buffer, format="JPEG")
+        encoded = base64.b64encode(temp_buffer.getvalue()).decode("utf-8")
+        return f"data:image/jpeg;base64,{encoded}"
+
+    with open(bildpfad, "rb") as f:
+        encoded = base64.b64encode(f.read()).decode("utf-8")
+
+    return f"data:{mime_type};base64,{encoded}"
+
+
+def ki_bildanalyse(bildpfad):
+    api_key = st.secrets.get("OPENAI_API_KEY", "")
+
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY fehlt in den Streamlit-Secrets.")
+
+    client = OpenAI(api_key=api_key)
+
+    data_url = bild_als_base64_data_url(bildpfad)
+
+    prompt = """
+Analysiere das Kunstbild für ein deutschsprachiges Kunstarchiv.
+
+Gib ausschließlich gültiges JSON zurück, ohne Markdown, ohne Erklärung.
+
+Schema:
+{
+  "beschreibung": "Ein sachlicher, kunsthistorisch brauchbarer Beschreibungstext mit 3 bis 5 Sätzen.",
+  "schlagworte": "8 bis 12 Schlagworte, kommasepariert",
+  "technik_stil": "Vorsichtige Einschätzung zu Technik, Stil, Gattung oder Bildtyp. Keine Gewissheiten behaupten, wenn sie nicht sichtbar sind."
+}
+
+Wichtig:
+- Keine erfundenen Künstlernamen.
+- Keine erfundenen Datierungen.
+- Bei Unsicherheit Formulierungen wie „wirkt“, „erinnert an“, „möglicherweise“ verwenden.
+- Beschreibe nur, was visuell plausibel erkennbar ist.
+"""
+
+    response = client.responses.create(
+        model="gpt-4.1-mini",
+        input=[
+            {
+                "role": "user",
+                "content": [
+                    {"type": "input_text", "text": prompt},
+                    {"type": "input_image", "image_url": data_url},
+                ],
+            }
+        ],
+    )
+
+    text = response.output_text.strip()
+
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return {
+            "beschreibung": text,
+            "schlagworte": "",
+            "technik_stil": "",
+        }
 
 
 with st.sidebar:
@@ -490,6 +568,56 @@ else:
                 st.write(f"**Beschreibung:** {row.get('Beschreibung', '')}")
                 st.write(f"**Schlagworte:** {row.get('Schlagworte', '')}")
                 st.write(f"**Dateiname:** {row.get('Dateiname', '')}")
+
+                st.divider()
+
+                with st.expander("KI-Bildanalyse"):
+                    st.write("Erzeugt eine Beschreibung, Schlagworte und eine vorsichtige Stil-/Technikeinschätzung.")
+
+                    if st.button("KI-Beschreibung erzeugen", key=f"ki_{rowid}"):
+                        if bildpfad.exists():
+                            with st.spinner("KI analysiert das Bild..."):
+                                try:
+                                    analyse = ki_bildanalyse(bildpfad)
+
+                                    st.session_state[f"ki_beschreibung_{rowid}"] = analyse.get("beschreibung", "")
+                                    st.session_state[f"ki_schlagworte_{rowid}"] = analyse.get("schlagworte", "")
+                                    st.session_state[f"ki_technik_{rowid}"] = analyse.get("technik_stil", "")
+
+                                except Exception as e:
+                                    st.error(f"Fehler bei der KI-Analyse: {e}")
+                        else:
+                            st.error("Bilddatei nicht gefunden.")
+
+                    if st.session_state.get(f"ki_beschreibung_{rowid}"):
+                        st.subheader("KI-Vorschlag")
+
+                        st.write("**Beschreibung:**")
+                        st.write(st.session_state[f"ki_beschreibung_{rowid}"])
+
+                        st.write("**Schlagworte:**")
+                        st.write(st.session_state[f"ki_schlagworte_{rowid}"])
+
+                        st.write("**Technik/Stil:**")
+                        st.write(st.session_state[f"ki_technik_{rowid}"])
+
+                        if st.button("KI-Vorschlag in Datensatz übernehmen", key=f"ki_uebernehmen_{rowid}"):
+                            neue_daten = {
+                                "Künstler": str(row.get("Künstler", "")),
+                                "Titel": str(row.get("Titel", "")),
+                                "Jahr": str(row.get("Jahr", "")),
+                                "Technik": st.session_state[f"ki_technik_{rowid}"],
+                                "Maße": str(row.get("Maße", "")),
+                                "Standort": str(row.get("Standort", "")),
+                                "Rechte": str(row.get("Rechte", "")),
+                                "Beschreibung": st.session_state[f"ki_beschreibung_{rowid}"],
+                                "Schlagworte": st.session_state[f"ki_schlagworte_{rowid}"],
+                            }
+
+                            datensatz_aktualisieren(rowid, neue_daten)
+
+                            st.success("KI-Vorschlag wurde übernommen.")
+                            st.rerun()
 
                 st.divider()
 
