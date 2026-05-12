@@ -196,10 +196,11 @@ tab1, tab2 = st.tabs(["Archiv durchsuchen", "Neues Bild hinzufügen"])
 with tab2:
     st.header("Neues Bild hinzufügen")
 
-    uploaded_file = st.file_uploader(
-        "Bilddatei auswählen",
-        type=["jpg", "jpeg", "png", "webp", "tif", "tiff"],
-    )
+    uploaded_files = st.file_uploader(
+    "Bilddateien auswählen",
+    type=["jpg", "jpeg", "png", "webp", "tif", "tiff"],
+    accept_multiple_files=True
+)
 
     kuenstler_neu = st.text_input("Künstler")
     titel_neu = st.text_input("Titel")
@@ -211,47 +212,68 @@ with tab2:
     beschreibung_neu = st.text_area("Beschreibung")
     schlagworte_neu = st.text_input("Schlagworte")
 
-    if uploaded_file is not None:
-        st.image(uploaded_file, width=300)
+    if uploaded_files:
+    st.write(f"{len(uploaded_files)} Bilddatei(en) ausgewählt")
 
-    if st.button("Bild und Datensatz speichern"):
-        if uploaded_file is None:
-            st.error("Bitte zuerst eine Bilddatei auswählen.")
+    vorschau_spalten = st.columns(4)
+
+    for index, datei in enumerate(uploaded_files):
+
+        with vorschau_spalten[index % 4]:
+            st.image(datei, width=150)
+            st.caption(datei.name)
+
+    if st.button("Bilder und Datensätze speichern"):
+        if not uploaded_files:
+    st.error("Bitte zuerst Bilddateien auswählen.")
         elif not titel_neu:
             st.error("Bitte mindestens einen Titel eingeben.")
-        else:
-            original_name = uploaded_file.name
-            zielpfad = IMAGE_DIR / original_name
+       else:
 
-            counter = 1
-            while zielpfad.exists():
-                stem = Path(original_name).stem
-                suffix = Path(original_name).suffix
-                zielpfad = IMAGE_DIR / f"{stem}_{counter}{suffix}"
-                counter += 1
+    backup_erstellen()
 
-            backup_erstellen()
+    gespeichert = 0
 
-            with open(zielpfad, "wb") as f:
-                shutil.copyfileobj(uploaded_file, f)
+    for uploaded_file in uploaded_files:
 
-            daten = {
-                "Dateiname": zielpfad.name,
-                "Künstler": kuenstler_neu,
-                "Titel": titel_neu,
-                "Jahr": jahr_neu,
-                "Technik": technik_neu,
-                "Maße": masse_neu,
-                "Standort": standort_neu,
-                "Rechte": rechte_neu,
-                "Beschreibung": beschreibung_neu,
-                "Schlagworte": schlagworte_neu,
-                "Bildpfad": str(zielpfad),
-            }
+        original_name = uploaded_file.name
+        zielpfad = IMAGE_DIR / original_name
 
-            datensatz_speichern(daten)
-            st.success(f"Gespeichert als: {zielpfad.name}")
-            st.rerun()
+        counter = 1
+
+        while zielpfad.exists():
+
+            stem = Path(original_name).stem
+            suffix = Path(original_name).suffix
+
+            zielpfad = IMAGE_DIR / f"{stem}_{counter}{suffix}"
+
+            counter += 1
+
+        with open(zielpfad, "wb") as f:
+            shutil.copyfileobj(uploaded_file, f)
+
+        daten = {
+            "Dateiname": zielpfad.name,
+            "Künstler": kuenstler_neu,
+            "Titel": titel_neu if titel_neu else zielpfad.stem,
+            "Jahr": jahr_neu,
+            "Technik": technik_neu,
+            "Maße": masse_neu,
+            "Standort": standort_neu,
+            "Rechte": rechte_neu,
+            "Beschreibung": beschreibung_neu,
+            "Schlagworte": schlagworte_neu,
+            "Bildpfad": str(zielpfad),
+        }
+
+        datensatz_speichern(daten)
+
+        gespeichert += 1
+
+    st.success(f"{gespeichert} Bilder gespeichert.")
+
+    st.rerun()
 
 
 with tab1:
