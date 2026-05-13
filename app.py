@@ -5,6 +5,7 @@ import shutil
 import base64
 import json
 import uuid
+import requests
 from pathlib import Path
 from datetime import datetime
 from io import BytesIO
@@ -22,27 +23,40 @@ PASSWORT = "kunstarchiv2026"
 IMAGE_DIR.mkdir(exist_ok=True)
 BACKUP_DIR.mkdir(exist_ok=True)
 
-st.set_page_config(page_title="Kunstbild-Datenbank", layout="wide")
-
+st.set_page_config(
+    page_title="Kunstbild-Datenbank",
+    layout="wide"
+)
 
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 SUPABASE_BUCKET = st.secrets["SUPABASE_BUCKET"]
 
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+supabase = create_client(
+    SUPABASE_URL,
+    SUPABASE_KEY
+)
 
 
 def login_pruefen():
+
     st.title("Kunstbild-Datenbank")
+
     st.subheader("Geschützter Zugang")
 
-    eingabe = st.text_input("Passwort eingeben", type="password")
+    eingabe = st.text_input(
+        "Passwort eingeben",
+        type="password"
+    )
 
     if eingabe == PASSWORT:
+
         st.session_state["eingeloggt"] = True
+
         st.rerun()
 
     elif eingabe:
+
         st.error("Falsches Passwort.")
 
 
@@ -59,12 +73,17 @@ if "ausgewaehlte_rowid" not in st.session_state:
     st.session_state["ausgewaehlte_rowid"] = None
 
 if not st.session_state["eingeloggt"]:
+
     login_pruefen()
+
     st.stop()
 
 
 st.title("Kunstbild-Datenbank")
-st.caption("Recherche, Vorschau, Upload, Export, KI-Analyse und Verwaltung deiner Kunstbilder")
+
+st.caption(
+    "Recherche, Vorschau, Upload, Export, KI-Analyse und Verwaltung deiner Kunstbilder"
+)
 
 
 def backup_erstellen():
@@ -94,11 +113,17 @@ def daten_laden():
 
 def excel_export_erzeugen(df):
 
-    export_df = df.drop(columns=["rowid"], errors="ignore")
+    export_df = df.drop(
+        columns=["rowid"],
+        errors="ignore"
+    )
 
     output = BytesIO()
 
-    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+    with pd.ExcelWriter(
+        output,
+        engine="openpyxl"
+    ) as writer:
 
         export_df.to_excel(
             writer,
@@ -208,9 +233,11 @@ def datensatz_loeschen(rowid, dateiname, bildpfad):
 
         try:
 
-            filename = bildpfad.split("/")[-1]
+            filename = dateiname
 
-            supabase.storage.from_(SUPABASE_BUCKET).remove([filename])
+            supabase.storage.from_(
+                SUPABASE_BUCKET
+            ).remove([filename])
 
         except:
             pass
@@ -224,7 +251,7 @@ def datensatz_loeschen(rowid, dateiname, bildpfad):
             echter_bildpfad.unlink()
 
 
-def bild_laden(bildpfad):
+def bild_laden_lokal(bildpfad):
 
     bild = Image.open(bildpfad)
 
@@ -233,7 +260,33 @@ def bild_laden(bildpfad):
     return bild
 
 
-def vorschaubild_erzeugen(bild, ziel_breite=260, ziel_hoehe=260):
+def bild_laden_url(url):
+
+    response = requests.get(url)
+
+    bild = Image.open(BytesIO(response.content))
+
+    bild = ImageOps.exif_transpose(bild)
+
+    return bild
+
+
+def bild_laden(bildpfad):
+
+    if str(bildpfad).startswith("http"):
+
+        return bild_laden_url(bildpfad)
+
+    else:
+
+        return bild_laden_lokal(bildpfad)
+
+
+def vorschaubild_erzeugen(
+    bild,
+    ziel_breite=260,
+    ziel_hoehe=260
+):
 
     bild = bild.copy()
 
@@ -272,48 +325,41 @@ def kurzer_titel(text, max_laenge=18):
 
 def bild_als_base64_data_url(bildpfad):
 
-    suffix = str(bildpfad).lower()
-
-    if suffix.endswith(".jpg") or suffix.endswith(".jpeg"):
-
-        mime_type = "image/jpeg"
-
-    elif suffix.endswith(".png"):
-
-        mime_type = "image/png"
-
-    elif suffix.endswith(".webp"):
-
-        mime_type = "image/webp"
-
-    else:
-
-        mime_type = "image/jpeg"
-
     if str(bildpfad).startswith("http"):
-
-        import requests
 
         response = requests.get(bildpfad)
 
-        encoded = base64.b64encode(response.content).decode("utf-8")
+        encoded = base64.b64encode(
+            response.content
+        ).decode("utf-8")
+
+        mime_type = "image/jpeg"
 
     else:
 
         with open(bildpfad, "rb") as f:
 
-            encoded = base64.b64encode(f.read()).decode("utf-8")
+            encoded = base64.b64encode(
+                f.read()
+            ).decode("utf-8")
+
+        mime_type = "image/jpeg"
 
     return f"data:{mime_type};base64,{encoded}"
 
 
 def ki_bildanalyse(bildpfad):
 
-    api_key = st.secrets.get("OPENAI_API_KEY", "")
+    api_key = st.secrets.get(
+        "OPENAI_API_KEY",
+        ""
+    )
 
     client = OpenAI(api_key=api_key)
 
-    data_url = bild_als_base64_data_url(bildpfad)
+    data_url = bild_als_base64_data_url(
+        bildpfad
+    )
 
     prompt = """
 Analysiere das Kunstbild für ein deutschsprachiges Kunstarchiv.
@@ -334,8 +380,14 @@ Schema:
             {
                 "role": "user",
                 "content": [
-                    {"type": "input_text", "text": prompt},
-                    {"type": "input_image", "image_url": data_url},
+                    {
+                        "type": "input_text",
+                        "text": prompt
+                    },
+                    {
+                        "type": "input_image",
+                        "image_url": data_url
+                    },
                 ],
             }
         ],
@@ -358,21 +410,31 @@ Schema:
 
 def bild_nach_supabase(uploaded_file):
 
-    suffix = Path(uploaded_file.name).suffix
+    suffix = Path(
+        uploaded_file.name
+    ).suffix
 
-    eindeutiger_name = f"{uuid.uuid4()}{suffix}"
+    eindeutiger_name = (
+        f"{uuid.uuid4()}{suffix}"
+    )
 
     file_bytes = uploaded_file.getvalue()
 
-    supabase.storage.from_(SUPABASE_BUCKET).upload(
+    supabase.storage.from_(
+        SUPABASE_BUCKET
+    ).upload(
         eindeutiger_name,
         file_bytes,
-        {"content-type": uploaded_file.type}
+        {
+            "content-type": uploaded_file.type
+        }
     )
 
     public_url = supabase.storage.from_(
         SUPABASE_BUCKET
-    ).get_public_url(eindeutiger_name)
+    ).get_public_url(
+        eindeutiger_name
+    )
 
     return eindeutiger_name, public_url
 
@@ -383,7 +445,10 @@ with st.sidebar:
 
     seite = st.radio(
         "Bereich wählen",
-        ["Archiv durchsuchen", "Neues Bild hinzufügen"],
+        [
+            "Archiv durchsuchen",
+            "Neues Bild hinzufügen"
+        ],
         index=0 if st.session_state["seite"] == "Archiv durchsuchen" else 1,
     )
 
@@ -404,7 +469,14 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
 
     uploaded_files = st.file_uploader(
         "Bilddateien auswählen",
-        type=["jpg", "jpeg", "png", "webp", "tif", "tiff"],
+        type=[
+            "jpg",
+            "jpeg",
+            "png",
+            "webp",
+            "tif",
+            "tiff"
+        ],
         accept_multiple_files=True,
     )
 
@@ -420,7 +492,9 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
 
     if uploaded_files:
 
-        st.write(f"{len(uploaded_files)} Bilddatei(en) ausgewählt")
+        st.write(
+            f"{len(uploaded_files)} Bilddatei(en) ausgewählt"
+        )
 
         vorschau_spalten = st.columns(4)
 
@@ -436,7 +510,9 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
 
         if not uploaded_files:
 
-            st.error("Bitte zuerst Bilddateien auswählen.")
+            st.error(
+                "Bitte zuerst Bilddateien auswählen."
+            )
 
         else:
 
@@ -446,8 +522,10 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
 
             for uploaded_file in uploaded_files:
 
-                eindeutiger_name, public_url = bild_nach_supabase(
-                    uploaded_file
+                eindeutiger_name, public_url = (
+                    bild_nach_supabase(
+                        uploaded_file
+                    )
                 )
 
                 daten = {
@@ -468,14 +546,19 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
 
                 gespeichert += 1
 
-            st.session_state["seite"] = "Archiv durchsuchen"
+            st.session_state["seite"] = (
+                "Archiv durchsuchen"
+            )
 
-            st.session_state["ansicht"] = "Galerieansicht"
+            st.session_state["ansicht"] = (
+                "Galerieansicht"
+            )
 
-            st.success(f"{gespeichert} Bilder gespeichert.")
+            st.success(
+                f"{gespeichert} Bilder gespeichert."
+            )
 
             st.rerun()
-
 
 else:
 
@@ -483,6 +566,415 @@ else:
         "Supabase-Integration aktiv. Neue Bilder werden dauerhaft online gespeichert."
     )
 
-    st.info(
-        "Bestehende lokale Bilder funktionieren weiterhin parallel."
+    df = daten_laden()
+
+    st.sidebar.header("Filter")
+
+    suchbegriff = st.sidebar.text_input(
+        "Freie Suche"
     )
+
+    kuenstler_liste = ["Alle"] + sorted(
+        df["Künstler"]
+        .astype(str)
+        .unique()
+        .tolist()
+    )
+
+    kuenstler_filter = st.sidebar.selectbox(
+        "Künstler",
+        kuenstler_liste,
+    )
+
+    sortierung = st.sidebar.selectbox(
+        "Sortieren nach",
+        [
+            "Titel",
+            "Künstler",
+            "Jahr",
+            "Technik"
+        ],
+    )
+
+    gefiltert = df.copy()
+
+    if suchbegriff:
+
+        suchbegriff = suchbegriff.lower()
+
+        gefiltert = gefiltert[
+            gefiltert.astype(str)
+            .apply(
+                lambda row:
+                row.str.lower()
+                .str.contains(suchbegriff)
+                .any(),
+                axis=1,
+            )
+        ]
+
+    if kuenstler_filter != "Alle":
+
+        gefiltert = gefiltert[
+            gefiltert["Künstler"]
+            .astype(str)
+            == kuenstler_filter
+        ]
+
+    if sortierung in gefiltert.columns:
+
+        gefiltert = gefiltert.sort_values(
+            by=sortierung,
+            ascending=True,
+        )
+
+    gefiltert = gefiltert.reset_index(
+        drop=True
+    )
+
+    st.write(
+        f"**{len(gefiltert)} Einträge gefunden**"
+    )
+
+    export_excel = excel_export_erzeugen(
+        gefiltert
+    )
+
+    export_csv = (
+        gefiltert
+        .drop(
+            columns=["rowid"],
+            errors="ignore",
+        )
+        .to_csv(index=False)
+        .encode("utf-8-sig")
+    )
+
+    col_export1, col_export2 = st.columns(
+        [1, 1]
+    )
+
+    with col_export1:
+
+        st.download_button(
+            label="Trefferliste als Excel herunterladen",
+            data=export_excel,
+            file_name="kunstbilder_export.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+
+    with col_export2:
+
+        st.download_button(
+            label="Trefferliste als CSV herunterladen",
+            data=export_csv,
+            file_name="kunstbilder_export.csv",
+            mime="text/csv",
+        )
+
+    ansicht = st.radio(
+        "Ansicht",
+        [
+            "Galerieansicht",
+            "Detailansicht"
+        ],
+        horizontal=True,
+        index=0 if st.session_state["ansicht"] == "Galerieansicht" else 1,
+    )
+
+    st.session_state["ansicht"] = ansicht
+
+    if ansicht == "Galerieansicht":
+
+        for start in range(
+            0,
+            len(gefiltert),
+            3
+        ):
+
+            spalten = st.columns(3)
+
+            for i in range(3):
+
+                if start + i >= len(gefiltert):
+                    continue
+
+                row = gefiltert.iloc[start + i]
+
+                bildpfad = row["Bildpfad"]
+
+                with spalten[i]:
+
+                    with st.container(border=True):
+
+                        try:
+
+                            bild = bild_laden(
+                                bildpfad
+                            )
+
+                            vorschau = (
+                                vorschaubild_erzeugen(
+                                    bild
+                                )
+                            )
+
+                            st.image(
+                                vorschau,
+                                width=260
+                            )
+
+                        except:
+
+                            st.warning(
+                                "Bild nicht gefunden"
+                            )
+
+                        if st.button(
+                            "Groß anzeigen",
+                            key=f"gross_{row['rowid']}",
+                        ):
+
+                            st.session_state[
+                                "ausgewaehlte_rowid"
+                            ] = int(
+                                row["rowid"]
+                            )
+
+                            st.session_state[
+                                "ansicht"
+                            ] = "Detailansicht"
+
+                            st.rerun()
+
+                        with st.popover(
+                            "🗑️ Löschen"
+                        ):
+
+                            st.warning(
+                                "Wirklich löschen?"
+                            )
+
+                            if st.button(
+                                "Ja, endgültig löschen",
+                                key=f"confirm_delete_gallery_{row['rowid']}",
+                            ):
+
+                                datensatz_loeschen(
+                                    row["rowid"],
+                                    row["Dateiname"],
+                                    row["Bildpfad"],
+                                )
+
+                                st.success(
+                                    "Datensatz wurde gelöscht."
+                                )
+
+                                st.rerun()
+
+                        st.markdown(
+                            f"### {kurzer_titel(row.get('Titel', ''))}"
+                        )
+
+                        st.write(
+                            f"**Künstler:** {row.get('Künstler', '')}"
+                        )
+
+                        st.write(
+                            f"**Jahr:** {row.get('Jahr', '')}"
+                        )
+
+    else:
+
+        auswahl_liste = [
+            f"{row.get('Künstler', '')} – {row.get('Titel', '')} [{row.get('rowid', '')}]"
+            for _, row in gefiltert.iterrows()
+        ]
+
+        if len(auswahl_liste) == 0:
+
+            st.info(
+                "Keine Einträge gefunden."
+            )
+
+        else:
+
+            vorauswahl_index = 0
+
+            if (
+                st.session_state[
+                    "ausgewaehlte_rowid"
+                ]
+                is not None
+            ):
+
+                for idx, row_check in gefiltert.iterrows():
+
+                    if int(
+                        row_check["rowid"]
+                    ) == int(
+                        st.session_state[
+                            "ausgewaehlte_rowid"
+                        ]
+                    ):
+
+                        vorauswahl_index = idx
+
+                        break
+
+            auswahl = st.selectbox(
+                "Werk auswählen",
+                auswahl_liste,
+                index=vorauswahl_index,
+            )
+
+            index = auswahl_liste.index(
+                auswahl
+            )
+
+            row = gefiltert.iloc[index]
+
+            rowid = int(row["rowid"])
+
+            st.session_state[
+                "ausgewaehlte_rowid"
+            ] = rowid
+
+            bildpfad = row["Bildpfad"]
+
+            if st.button(
+                "Zurück zur Galerie"
+            ):
+
+                st.session_state[
+                    "ansicht"
+                ] = "Galerieansicht"
+
+                st.rerun()
+
+            col1, col2 = st.columns(
+                [1.4, 1]
+            )
+
+            with col1:
+
+                try:
+
+                    bild = bild_laden(
+                        bildpfad
+                    )
+
+                    st.image(
+                        bild,
+                        use_container_width=True,
+                    )
+
+                except:
+
+                    st.warning(
+                        "Bild konnte nicht geladen werden."
+                    )
+
+            with col2:
+
+                st.header(
+                    str(row.get("Titel", ""))
+                )
+
+                st.write(
+                    f"**Künstler:** {row.get('Künstler', '')}"
+                )
+
+                st.write(
+                    f"**Jahr:** {row.get('Jahr', '')}"
+                )
+
+                st.write(
+                    f"**Technik:** {row.get('Technik', '')}"
+                )
+
+                st.write(
+                    f"**Maße:** {row.get('Maße', '')}"
+                )
+
+                st.write(
+                    f"**Standort:** {row.get('Standort', '')}"
+                )
+
+                st.write(
+                    f"**Rechte:** {row.get('Rechte', '')}"
+                )
+
+                st.write(
+                    f"**Beschreibung:** {row.get('Beschreibung', '')}"
+                )
+
+                st.write(
+                    f"**Schlagworte:** {row.get('Schlagworte', '')}"
+                )
+
+                st.divider()
+
+                with st.expander(
+                    "KI-Bildanalyse"
+                ):
+
+                    if st.button(
+                        "KI-Beschreibung erzeugen",
+                        key=f"ki_{rowid}"
+                    ):
+
+                        with st.spinner(
+                            "KI analysiert das Bild..."
+                        ):
+
+                            analyse = ki_bildanalyse(
+                                bildpfad
+                            )
+
+                            st.session_state[
+                                f"ki_beschreibung_{rowid}"
+                            ] = analyse.get(
+                                "beschreibung",
+                                ""
+                            )
+
+                            st.session_state[
+                                f"ki_schlagworte_{rowid}"
+                            ] = analyse.get(
+                                "schlagworte",
+                                ""
+                            )
+
+                            st.session_state[
+                                f"ki_technik_{rowid}"
+                            ] = analyse.get(
+                                "technik_stil",
+                                ""
+                            )
+
+                    if st.session_state.get(
+                        f"ki_beschreibung_{rowid}"
+                    ):
+
+                        st.subheader(
+                            "KI-Vorschlag"
+                        )
+
+                        st.write(
+                            st.session_state[
+                                f"ki_beschreibung_{rowid}"
+                            ]
+                        )
+
+                        st.write(
+                            st.session_state[
+                                f"ki_schlagworte_{rowid}"
+                            ]
+                        )
+
+                        st.write(
+                            st.session_state[
+                                f"ki_technik_{rowid}"
+                            ]
+                        )
