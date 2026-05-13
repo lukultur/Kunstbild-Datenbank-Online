@@ -310,9 +310,24 @@ else:
         df["kuenstler"].astype(str).unique().tolist()
     )
 
-    kuenstler_filter = st.sidebar.selectbox(
+        kuenstler_filter = st.sidebar.selectbox(
         "Künstler",
         kuenstler_liste,
+    )
+
+    stil_filter = st.sidebar.multiselect(
+        "Stil / Epoche",
+        STIL_OPTIONEN,
+    )
+
+    technik_filter = st.sidebar.multiselect(
+        "Techniken",
+        TECHNIK_OPTIONEN,
+    )
+
+    gattung_filter = st.sidebar.multiselect(
+        "Gattung / Motiv",
+        GATTUNG_OPTIONEN,
     )
 
     gefiltert = df.copy()
@@ -328,10 +343,31 @@ else:
             )
         ]
 
-    if kuenstler_filter != "Alle":
+        if kuenstler_filter != "Alle":
         gefiltert = gefiltert[
             gefiltert["kuenstler"].astype(str)
             == kuenstler_filter
+        ]
+
+    if stil_filter:
+        gefiltert = gefiltert[
+            gefiltert["stile"].astype(str).apply(
+                lambda text: any(wert in text for wert in stil_filter)
+            )
+        ]
+
+    if technik_filter:
+        gefiltert = gefiltert[
+            gefiltert["techniken"].astype(str).apply(
+                lambda text: any(wert in text for wert in technik_filter)
+            )
+        ]
+
+    if gattung_filter:
+        gefiltert = gefiltert[
+            gefiltert["gattungen"].astype(str).apply(
+                lambda text: any(wert in text for wert in gattung_filter)
+            )
         ]
 
     gefiltert = gefiltert.reset_index(drop=True)
