@@ -381,17 +381,17 @@ else:
                     mime="application/pdf",
                 )
 
-    ansicht = st.radio(
-    "Ansicht",
-    [
-        "Galerieansicht",
-        "Detailansicht"
-    ],
-    horizontal=True,
-    index=0 if st.session_state["ansicht"] == "Galerieansicht" else 1,
-)
+            ansicht = st.radio(
+        "Ansicht",
+        [
+            "Galerieansicht",
+            "Detailansicht"
+        ],
+        horizontal=True,
+        index=0 if st.session_state["ansicht"] == "Galerieansicht" else 1,
+    )
 
-st.session_state["ansicht"] = ansicht
+    st.session_state["ansicht"] = ansicht
 
     # =====================================================
     # GALERIE
