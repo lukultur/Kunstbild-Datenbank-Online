@@ -6,7 +6,6 @@ import uuid
 import requests
 from pathlib import Path
 from io import BytesIO
-from PIL import Image
 from openai import OpenAI
 from supabase import create_client
 
@@ -44,6 +43,9 @@ if "ansicht" not in st.session_state:
 
 if "ausgewaehlte_id" not in st.session_state:
     st.session_state["ausgewaehlte_id"] = None
+
+if "ki_upload_analyse" not in st.session_state:
+    st.session_state["ki_upload_analyse"] = {}
 
 if not st.session_state["eingeloggt"]:
     login_pruefen()
@@ -157,6 +159,13 @@ def bild_als_base64_data_url(bild_url):
     return f"data:image/jpeg;base64,{encoded}"
 
 
+def uploaded_file_als_base64_data_url(uploaded_file):
+    file_bytes = uploaded_file.getvalue()
+    encoded = base64.b64encode(file_bytes).decode("utf-8")
+    mime_type = uploaded_file.type or "image/jpeg"
+    return f"data:{mime_type};base64,{encoded}"
+
+
 def ki_bildanalyse(bild_url):
     api_key = st.secrets.get("OPENAI_API_KEY", "")
     client = OpenAI(api_key=api_key)
@@ -204,7 +213,13 @@ Wichtig:
             "schlagworte": "",
             "technik_stil": "",
         }
+
+
 def ki_recherche_fuer_bild(uploaded_file):
+    api_key = st.secrets.get("OPENAI_API_KEY", "")
+    client = OpenAI(api_key=api_key)
+
+    data_url = uploaded_file_als_base64_data_url(uploaded_file)
 
     prompt = """
 Du bist Kunsthistoriker, Archivar und Bildrechercheur.
@@ -216,27 +231,21 @@ WICHTIG:
 - Erfinde niemals Bildtitel.
 - Erfinde niemals Datierungen.
 - Wenn du unsicher bist, formuliere das klar.
-- Gib nur Informationen an, die plausibel sind.
+- Gib nur Informationen an, die visuell plausibel sind.
+- Wenn keine eindeutige Identifikation möglich ist, lasse Künstler, Titel und Jahr leer oder formuliere vorsichtig.
 
-Nutze:
-- Bildanalyse
-- kunsthistorische Stilmerkmale
-- sichtbare Signaturen
-- Motivik
-- mögliche Internetrecherchehinweise
-
-Gib ausschließlich gültiges JSON zurück.
+Gib ausschließlich gültiges JSON zurück, ohne Markdown.
 
 Schema:
 {
-  "kuenstler": "...",
-  "titel": "...",
-  "jahr": "...",
-  "technik": "...",
-  "beschreibung": "...",
-  "schlagworte": "...",
+  "kuenstler": "",
+  "titel": "",
+  "jahr": "",
+  "technik": "",
+  "beschreibung": "",
+  "schlagworte": "",
   "einschaetzung": "sicher / wahrscheinlich / unsicher",
-  "begruendung": "..."
+  "begruendung": ""
 }
 """
 
@@ -246,14 +255,8 @@ Schema:
             {
                 "role": "user",
                 "content": [
-                    {
-                        "type": "input_text",
-                        "text": prompt
-                    },
-                    {
-                        "type": "input_image",
-                        "image_url": data_url
-                    },
+                    {"type": "input_text", "text": prompt},
+                    {"type": "input_image", "image_url": data_url},
                 ],
             }
         ],
@@ -262,11 +265,8 @@ Schema:
     text = response.output_text.strip()
 
     try:
-
         return json.loads(text)
-
-    except:
-
+    except json.JSONDecodeError:
         return {
             "kuenstler": "",
             "titel": "",
@@ -275,8 +275,9 @@ Schema:
             "beschreibung": text,
             "schlagworte": "",
             "einschaetzung": "unsicher",
-            "begruendung": "JSON konnte nicht gelesen werden"
+            "begruendung": "Die KI-Antwort konnte nicht als JSON gelesen werden.",
         }
+
 
 def bild_nach_supabase(uploaded_file):
     suffix = Path(uploaded_file.name).suffix
@@ -314,218 +315,82 @@ with st.sidebar:
 
 
 if st.session_state["seite"] == "Neues Bild hinzufügen":
-
     st.header("Neue Bilder hinzufügen")
 
     uploaded_files = st.file_uploader(
         "Bilddateien auswählen",
-        type=[
-            "jpg",
-            "jpeg",
-            "png",
-            "webp",
-            "tif",
-            "tiff"
-        ],
+        type=["jpg", "jpeg", "png", "webp", "tif", "tiff"],
         accept_multiple_files=True,
     )
 
-    analyse = st.session_state.get(
-        "ki_upload_analyse",
-        {}
-    )
+    analyse = st.session_state.get("ki_upload_analyse", {})
 
     kuenstler_neu = st.text_input(
         "Künstler",
-        value=analyse.get(
-            "kuenstler",
-            ""
-        )
+        value=analyse.get("kuenstler", ""),
     )
 
     titel_neu = st.text_input(
         "Titel",
-        value=analyse.get(
-            "titel",
-            ""
-        )
+        value=analyse.get("titel", ""),
     )
 
     jahr_neu = st.text_input(
         "Jahr",
-        value=analyse.get(
-            "jahr",
-            ""
-        )
+        value=analyse.get("jahr", ""),
     )
 
     technik_neu = st.text_input(
         "Technik",
-        value=analyse.get(
-            "technik",
-            ""
-        )
+        value=analyse.get("technik", ""),
     )
 
-    masse_neu = st.text_input(
-        "Maße"
-    )
-
-    standort_neu = st.text_input(
-        "Standort"
-    )
-
-    rechte_neu = st.text_input(
-        "Rechte"
-    )
+    masse_neu = st.text_input("Maße")
+    standort_neu = st.text_input("Standort")
+    rechte_neu = st.text_input("Rechte")
 
     beschreibung_neu = st.text_area(
         "Beschreibung",
-        value=analyse.get(
-            "beschreibung",
-            ""
-        )
+        value=analyse.get("beschreibung", ""),
     )
 
     schlagworte_neu = st.text_input(
         "Schlagworte",
-        value=analyse.get(
-            "schlagworte",
-            ""
-        )
+        value=analyse.get("schlagworte", ""),
     )
 
     if analyse:
+        st.info(f"Einschätzung der KI: {analyse.get('einschaetzung', '')}")
+        st.caption(analyse.get("begruendung", ""))
 
-        st.info(
-            f"Einschätzung der KI: "
-            f"{analyse.get('einschaetzung', '')}"
-        )
-
-        st.caption(
-            analyse.get(
-                "begruendung",
-                ""
-            )
-        )
+        if st.button("KI-Vorschlag verwerfen"):
+            st.session_state["ki_upload_analyse"] = {}
+            st.rerun()
 
     if uploaded_files:
+        st.write(f"{len(uploaded_files)} Bilddatei(en) ausgewählt")
 
-        if st.button(
-            "KI-Recherche starten"
-        ):
-
+        if st.button("KI-Recherche für erstes Bild starten"):
             erste_datei = uploaded_files[0]
 
-            with st.spinner(
-                "KI analysiert das Bild..."
-            ):
-
-                analyse = ki_recherche_fuer_bild(
-                    erste_datei
-                )
-
-                st.session_state[
-                    "ki_upload_analyse"
-                ] = analyse
-
-                st.rerun()
-
-        st.write(
-            f"{len(uploaded_files)} Bilddatei(en) ausgewählt"
-        )
+            with st.spinner("KI analysiert das Bild..."):
+                try:
+                    analyse = ki_recherche_fuer_bild(erste_datei)
+                    st.session_state["ki_upload_analyse"] = analyse
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Fehler bei der KI-Recherche: {e}")
 
         vorschau_spalten = st.columns(4)
 
         for index, datei in enumerate(uploaded_files):
-
             with vorschau_spalten[index % 4]:
+                st.image(datei, width=150)
+                st.caption(datei.name)
 
-                st.image(
-                    datei,
-                    width=150
-                )
-
-                st.caption(
-                    datei.name
-                )
-
-    if st.button(
-        "Bilder und Datensätze speichern"
-    ):
-
+    if st.button("Bilder und Datensätze speichern"):
         if not uploaded_files:
-
-            st.error(
-                "Bitte zuerst Bilddateien auswählen."
-            )
-
-        else:
-
-            gespeichert = 0
-
-            for uploaded_file in uploaded_files:
-
-                (
-                    eindeutiger_name,
-                    public_url
-                ) = bild_nach_supabase(
-                    uploaded_file
-                )
-
-                daten = {
-                    "dateiname":
-                    eindeutiger_name,
-
-                    "kuenstler":
-                    kuenstler_neu,
-
-                    "titel":
-                    titel_neu if titel_neu
-                    else Path(
-                        uploaded_file.name
-                    ).stem,
-
-                    "jahr":
-                    jahr_neu,
-
-                    "technik":
-                    technik_neu,
-
-                    "masse":
-                    masse_neu,
-
-                    "standort":
-                    standort_neu,
-
-                    "rechte":
-                    rechte_neu,
-
-                    "beschreibung":
-                    beschreibung_neu,
-
-                    "schlagworte":
-                    schlagworte_neu,
-
-                    "bildpfad":
-                    public_url,
-                }
-
-                datensatz_speichern(
-                    daten
-                )
-
-                gespeichert += 1
-
-            st.success(
-                f"{gespeichert} Bilder gespeichert."
-            )
-
-            st.session_state["seite"] = (
-                "Archiv durchsuchen"
-            )
-
-            st.rerun()
+            st.error("Bitte zuerst Bilddateien auswählen.")
         else:
             gespeichert = 0
 
@@ -549,6 +414,7 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
                 datensatz_speichern(daten)
                 gespeichert += 1
 
+            st.session_state["ki_upload_analyse"] = {}
             st.session_state["seite"] = "Archiv durchsuchen"
             st.session_state["ansicht"] = "Galerieansicht"
             st.success(f"{gespeichert} Bilder gespeichert.")
