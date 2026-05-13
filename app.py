@@ -234,7 +234,6 @@ def ki_bildanalyse(bildpfad):
         raise RuntimeError("OPENAI_API_KEY fehlt in den Streamlit-Secrets.")
 
     client = OpenAI(api_key=api_key)
-
     data_url = bild_als_base64_data_url(bildpfad)
 
     prompt = """
@@ -491,6 +490,23 @@ else:
                                     mime="application/octet-stream",
                                     key=f"download_{row['rowid']}",
                                 )
+
+                            with st.popover("🗑️ Löschen"):
+                                st.warning("Wirklich löschen?")
+
+                                if st.button(
+                                    "Ja, endgültig löschen",
+                                    key=f"confirm_delete_gallery_{row['rowid']}",
+                                ):
+                                    datensatz_loeschen(
+                                        row["rowid"],
+                                        row["Dateiname"],
+                                        row["Bildpfad"],
+                                    )
+
+                                    st.success("Datensatz wurde gelöscht.")
+                                    st.rerun()
+
                         else:
                             st.warning("Bild nicht gefunden")
 
