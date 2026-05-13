@@ -11,6 +11,74 @@ from supabase import create_client
 
 PASSWORT = "kunstarchiv2026"
 
+STIL_OPTIONEN = [
+    "Renaissance",
+    "Barock",
+    "Klassizismus",
+    "Romantik",
+    "Realismus",
+    "Impressionismus",
+    "Expressionismus",
+    "Kubismus",
+    "Fauvismus",
+    "Surrealismus",
+    "Abstrakte Kunst",
+    "Pop Art",
+    "Fotorealismus",
+    "Neue Sachlichkeit",
+    "Verismus",
+    "Symbolismus",
+    "Jugendstil",
+    "Dadaismus",
+    "Konstruktivismus",
+    "Minimalismus",
+    "Konzeptkunst",
+    "Informel",
+    "Tachismus",
+    "Arte Povera",
+    "Op Art",
+    "Land Art",
+    "Street Art",
+    "Zeitgenössische Kunst",
+]
+
+TECHNIK_OPTIONEN = [
+    "Ölmalerei",
+    "Acrylmalerei",
+    "Aquarellmalerei",
+    "Pastellmalerei",
+    "Gouache",
+    "Tempera",
+    "Mischtechnik",
+    "Collage",
+    "Tusche",
+    "Zeichnung",
+    "Kohle",
+    "Radierung",
+    "Lithografie",
+    "Siebdruck",
+    "Fotografie",
+    "Digitale Kunst",
+]
+
+GATTUNG_OPTIONEN = [
+    "Porträt",
+    "Selbstporträt",
+    "Landschaft",
+    "Stadtansicht",
+    "Stillleben",
+    "Akt",
+    "Interieur",
+    "Tierdarstellung",
+    "Historienbild",
+    "Religiöses Motiv",
+    "Abstrakt",
+    "Architektur",
+    "Naturdarstellung",
+    "Gesellschaftsszene",
+]
+
+
 st.set_page_config(page_title="Kunstbild-Datenbank", layout="wide")
 
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
@@ -89,6 +157,21 @@ st.title("Kunstbild-Datenbank")
 st.caption("Recherche, Vorschau, Upload, Export, KI-Analyse und Verwaltung deiner Kunstbilder")
 
 
+def text_zu_liste(text):
+    if not text:
+        return []
+
+    return [
+        eintrag.strip()
+        for eintrag in str(text).split(",")
+        if eintrag.strip()
+    ]
+
+
+def liste_zu_text(liste):
+    return ", ".join(liste)
+
+
 def daten_laden():
     response = (
         supabase.table("kunstbilder")
@@ -114,8 +197,15 @@ def daten_laden():
                 "beschreibung",
                 "schlagworte",
                 "bildpfad",
+                "stile",
+                "techniken",
+                "gattungen",
             ]
         )
+
+    for spalte in ["stile", "techniken", "gattungen"]:
+        if spalte not in df.columns:
+            df[spalte] = ""
 
     return df.fillna("")
 
@@ -155,6 +245,9 @@ def datensatz_aktualisieren(datensatz_id, daten):
         "rechte": str(daten.get("rechte", "")),
         "beschreibung": str(daten.get("beschreibung", "")),
         "schlagworte": str(daten.get("schlagworte", "")),
+        "stile": str(daten.get("stile", "")),
+        "techniken": str(daten.get("techniken", "")),
+        "gattungen": str(daten.get("gattungen", "")),
     }
 
     response = requests.patch(
@@ -219,6 +312,12 @@ Aufgabe:
 - Formuliere eine sachliche Beschreibung.
 - Erzeuge sinnvolle Schlagworte.
 - Schätze die Technik vorsichtig ein.
+- Wähle passende Stile/Epochen ausschließlich aus dieser Liste:
+{", ".join(STIL_OPTIONEN)}
+- Wähle passende Techniken ausschließlich aus dieser Liste:
+{", ".join(TECHNIK_OPTIONEN)}
+- Wähle passende Gattungen/Motive ausschließlich aus dieser Liste:
+{", ".join(GATTUNG_OPTIONEN)}
 - Keine erfundenen Zusatzinformationen.
 - Schlagworte sollen Künstler und Titel enthalten, sofern diese angegeben wurden.
 
@@ -228,8 +327,13 @@ Schema:
 {{
   "technik": "",
   "beschreibung": "",
-  "schlagworte": ""
+  "schlagworte": "",
+  "stile": "",
+  "techniken": "",
+  "gattungen": ""
 }}
+
+Mehrfachwerte kommasepariert ausgeben.
 """
 
     response = client.responses.create(
@@ -254,6 +358,9 @@ Schema:
             "technik": "",
             "beschreibung": text,
             "schlagworte": "",
+            "stile": "",
+            "techniken": "",
+            "gattungen": "",
         }
 
 
@@ -277,6 +384,12 @@ Aufgabe:
 - Formuliere eine sachliche Beschreibung mit 3 bis 5 Sätzen.
 - Erzeuge 8 bis 12 Schlagworte.
 - Schätze Technik, Stil oder Gattung vorsichtig ein.
+- Wähle passende Stile/Epochen ausschließlich aus dieser Liste:
+{", ".join(STIL_OPTIONEN)}
+- Wähle passende Techniken ausschließlich aus dieser Liste:
+{", ".join(TECHNIK_OPTIONEN)}
+- Wähle passende Gattungen/Motive ausschließlich aus dieser Liste:
+{", ".join(GATTUNG_OPTIONEN)}
 - Keine erfundenen Künstlernamen.
 - Keine erfundenen Datierungen.
 - Schlagworte sollen Künstler und Titel enthalten, sofern angegeben.
@@ -287,8 +400,13 @@ Schema:
 {{
   "beschreibung": "",
   "schlagworte": "",
-  "technik_stil": ""
+  "technik_stil": "",
+  "stile": "",
+  "techniken": "",
+  "gattungen": ""
 }}
+
+Mehrfachwerte kommasepariert ausgeben.
 """
 
     response = client.responses.create(
@@ -313,6 +431,9 @@ Schema:
             "beschreibung": text,
             "schlagworte": "",
             "technik_stil": "",
+            "stile": "",
+            "techniken": "",
+            "gattungen": "",
         }
 
 
@@ -384,6 +505,24 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
         value=analyse.get("technik", ""),
     )
 
+    stile_neu = st.multiselect(
+        "Stil / Epoche",
+        STIL_OPTIONEN,
+        default=text_zu_liste(analyse.get("stile", "")),
+    )
+
+    techniken_neu = st.multiselect(
+        "Techniken",
+        TECHNIK_OPTIONEN,
+        default=text_zu_liste(analyse.get("techniken", "")),
+    )
+
+    gattungen_neu = st.multiselect(
+        "Gattung / Motiv",
+        GATTUNG_OPTIONEN,
+        default=text_zu_liste(analyse.get("gattungen", "")),
+    )
+
     masse_neu = st.text_input("Maße")
     standort_neu = st.text_input("Standort")
     rechte_neu = st.text_input("Rechte")
@@ -401,7 +540,7 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
     if uploaded_files:
         st.write(f"{len(uploaded_files)} Bilddatei(en) ausgewählt")
 
-        if st.button("Beschreibung und Schlagworte erzeugen"):
+        if st.button("Beschreibung, Schlagworte und Kategorien erzeugen"):
             erste_datei = uploaded_files[0]
 
             with st.spinner("KI analysiert das Bild..."):
@@ -447,6 +586,9 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
                     "beschreibung": beschreibung_neu,
                     "schlagworte": schlagworte_neu,
                     "bildpfad": public_url,
+                    "stile": liste_zu_text(stile_neu),
+                    "techniken": liste_zu_text(techniken_neu),
+                    "gattungen": liste_zu_text(gattungen_neu),
                 }
 
                 datensatz_speichern(daten)
@@ -469,6 +611,21 @@ else:
     kuenstler_liste = ["Alle"] + sorted(df["kuenstler"].astype(str).unique().tolist())
     kuenstler_filter = st.sidebar.selectbox("Künstler", kuenstler_liste)
 
+    stil_filter = st.sidebar.multiselect(
+        "Stil / Epoche",
+        STIL_OPTIONEN,
+    )
+
+    technik_filter = st.sidebar.multiselect(
+        "Techniken",
+        TECHNIK_OPTIONEN,
+    )
+
+    gattung_filter = st.sidebar.multiselect(
+        "Gattung / Motiv",
+        GATTUNG_OPTIONEN,
+    )
+
     sortierung = st.sidebar.selectbox(
         "Sortieren nach",
         ["titel", "kuenstler", "jahr", "technik"],
@@ -485,6 +642,27 @@ else:
 
     if kuenstler_filter != "Alle":
         gefiltert = gefiltert[gefiltert["kuenstler"].astype(str) == kuenstler_filter]
+
+    if stil_filter:
+        gefiltert = gefiltert[
+            gefiltert["stile"].astype(str).apply(
+                lambda text: any(wert in text for wert in stil_filter)
+            )
+        ]
+
+    if technik_filter:
+        gefiltert = gefiltert[
+            gefiltert["techniken"].astype(str).apply(
+                lambda text: any(wert in text for wert in technik_filter)
+            )
+        ]
+
+    if gattung_filter:
+        gefiltert = gefiltert[
+            gefiltert["gattungen"].astype(str).apply(
+                lambda text: any(wert in text for wert in gattung_filter)
+            )
+        ]
 
     if sortierung in gefiltert.columns:
         gefiltert = gefiltert.sort_values(by=sortierung, ascending=True)
@@ -580,6 +758,12 @@ else:
                         st.write(f"**Künstler:** {row.get('kuenstler', '')}")
                         st.write(f"**Jahr:** {row.get('jahr', '')}")
 
+                        if row.get("stile", ""):
+                            st.caption(f"Stil: {row.get('stile', '')}")
+
+                        if row.get("gattungen", ""):
+                            st.caption(f"Gattung: {row.get('gattungen', '')}")
+
     else:
         auswahl_liste = [
             f"{row.get('kuenstler', '')} – {row.get('titel', '')} [{row.get('id', '')}]"
@@ -642,6 +826,9 @@ else:
                 st.write(f"**Maße:** {row.get('masse', '')}")
                 st.write(f"**Standort:** {row.get('standort', '')}")
                 st.write(f"**Rechte:** {row.get('rechte', '')}")
+                st.write(f"**Stil / Epoche:** {row.get('stile', '')}")
+                st.write(f"**Techniken:** {row.get('techniken', '')}")
+                st.write(f"**Gattung / Motiv:** {row.get('gattungen', '')}")
                 st.write(f"**Beschreibung:** {row.get('beschreibung', '')}")
                 st.write(f"**Schlagworte:** {row.get('schlagworte', '')}")
 
@@ -661,6 +848,9 @@ else:
                                 st.session_state[f"ki_beschreibung_{datensatz_id}"] = analyse.get("beschreibung", "")
                                 st.session_state[f"ki_schlagworte_{datensatz_id}"] = analyse.get("schlagworte", "")
                                 st.session_state[f"ki_technik_{datensatz_id}"] = analyse.get("technik_stil", "")
+                                st.session_state[f"ki_stile_{datensatz_id}"] = analyse.get("stile", "")
+                                st.session_state[f"ki_techniken_{datensatz_id}"] = analyse.get("techniken", "")
+                                st.session_state[f"ki_gattungen_{datensatz_id}"] = analyse.get("gattungen", "")
 
                             except Exception as e:
                                 st.error(f"Fehler bei der KI-Analyse: {e}")
@@ -677,6 +867,15 @@ else:
                         st.write("**Technik/Stil:**")
                         st.write(st.session_state[f"ki_technik_{datensatz_id}"])
 
+                        st.write("**Stil / Epoche:**")
+                        st.write(st.session_state[f"ki_stile_{datensatz_id}"])
+
+                        st.write("**Techniken:**")
+                        st.write(st.session_state[f"ki_techniken_{datensatz_id}"])
+
+                        st.write("**Gattung / Motiv:**")
+                        st.write(st.session_state[f"ki_gattungen_{datensatz_id}"])
+
                         if st.button(
                             "KI-Vorschlag in Datensatz übernehmen",
                             key=f"ki_uebernehmen_{datensatz_id}",
@@ -691,6 +890,9 @@ else:
                                 "rechte": str(row.get("rechte", "")),
                                 "beschreibung": st.session_state[f"ki_beschreibung_{datensatz_id}"],
                                 "schlagworte": st.session_state[f"ki_schlagworte_{datensatz_id}"],
+                                "stile": st.session_state[f"ki_stile_{datensatz_id}"],
+                                "techniken": st.session_state[f"ki_techniken_{datensatz_id}"],
+                                "gattungen": st.session_state[f"ki_gattungen_{datensatz_id}"],
                             }
 
                             datensatz_aktualisieren(datensatz_id, neue_daten)
@@ -708,6 +910,25 @@ else:
                         bearb_masse = st.text_input("Maße", value=str(row.get("masse", "")))
                         bearb_standort = st.text_input("Standort", value=str(row.get("standort", "")))
                         bearb_rechte = st.text_input("Rechte", value=str(row.get("rechte", "")))
+
+                        bearb_stile = st.multiselect(
+                            "Stil / Epoche",
+                            STIL_OPTIONEN,
+                            default=text_zu_liste(row.get("stile", "")),
+                        )
+
+                        bearb_techniken = st.multiselect(
+                            "Techniken",
+                            TECHNIK_OPTIONEN,
+                            default=text_zu_liste(row.get("techniken", "")),
+                        )
+
+                        bearb_gattungen = st.multiselect(
+                            "Gattung / Motiv",
+                            GATTUNG_OPTIONEN,
+                            default=text_zu_liste(row.get("gattungen", "")),
+                        )
+
                         bearb_beschreibung = st.text_area("Beschreibung", value=str(row.get("beschreibung", "")))
                         bearb_schlagworte = st.text_input("Schlagworte", value=str(row.get("schlagworte", "")))
 
@@ -724,6 +945,9 @@ else:
                             "rechte": bearb_rechte,
                             "beschreibung": bearb_beschreibung,
                             "schlagworte": bearb_schlagworte,
+                            "stile": liste_zu_text(bearb_stile),
+                            "techniken": liste_zu_text(bearb_techniken),
+                            "gattungen": liste_zu_text(bearb_gattungen),
                         }
 
                         try:
