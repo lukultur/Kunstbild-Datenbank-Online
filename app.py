@@ -11,17 +11,25 @@ from supabase import create_client
 
 PASSWORT = "kunstarchiv2026"
 
-st.set_page_config(page_title="Kunstbild-Datenbank", layout="wide")
+st.set_page_config(
+    page_title="Kunstbild-Datenbank",
+    layout="wide"
+)
 
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 SUPABASE_BUCKET = st.secrets["SUPABASE_BUCKET"]
 
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+supabase = create_client(
+    SUPABASE_URL,
+    SUPABASE_KEY
+)
 
 
 def login_pruefen():
+
     st.title("Kunstbild-Datenbank")
+
     st.subheader("Geschützter Zugang")
 
     eingabe = st.text_input(
@@ -30,10 +38,13 @@ def login_pruefen():
     )
 
     if eingabe == PASSWORT:
+
         st.session_state["eingeloggt"] = True
+
         st.rerun()
 
     elif eingabe:
+
         st.error("Falsches Passwort.")
 
 
@@ -53,13 +64,16 @@ if "ki_upload_analyse" not in st.session_state:
     st.session_state["ki_upload_analyse"] = {}
 
 if not st.session_state["eingeloggt"]:
+
     login_pruefen()
+
     st.stop()
 
 
 st.title("Kunstbild-Datenbank")
+
 st.caption(
-    "Recherche, Vorschau, Upload, Export, KI-Analyse und Verwaltung deiner Kunstbilder"
+    "Recherche, Vorschau, Upload, KI-Analyse und Verwaltung deiner Kunstbilder"
 )
 
 
@@ -194,31 +208,13 @@ def kurzer_titel(
     text = str(text)
 
     if len(text) > max_laenge:
+
         return text[:max_laenge] + "..."
 
     return text
 
 
 def bild_als_base64_data_url(
-    bild_url
-):
-
-    response = requests.get(
-        bild_url,
-        timeout=30
-    )
-
-    encoded = base64.b64encode(
-        response.content
-    ).decode("utf-8")
-
-    return (
-        f"data:image/jpeg;base64,"
-        f"{encoded}"
-    )
-
-
-def uploaded_file_als_base64_data_url(
     uploaded_file
 ):
 
@@ -242,8 +238,11 @@ def uploaded_file_als_base64_data_url(
     )
 
 
-def ki_recherche_fuer_bild(
-    uploaded_file
+def ki_textgenerator(
+    uploaded_file,
+    kuenstler,
+    titel,
+    jahr
 ):
 
     api_key = st.secrets.get(
@@ -255,59 +254,35 @@ def ki_recherche_fuer_bild(
         api_key=api_key
     )
 
-    data_url = (
-        uploaded_file_als_base64_data_url(
-            uploaded_file
-        )
+    data_url = bild_als_base64_data_url(
+        uploaded_file
     )
 
-    prompt = """
-Du bist Kunsthistoriker, Museumsarchivar und Bildredakteur.
+    prompt = f"""
+Du bist Kunsthistoriker und Museumsredakteur.
 
 Analysiere das hochgeladene Kunstwerk.
 
-WICHTIG:
-- Erfinde niemals Künstlernamen.
-- Erfinde niemals Bildtitel.
-- Erfinde niemals Datierungen.
-- Wenn du nicht absolut sicher bist:
-  - lasse Künstler leer
-  - lasse Titel leer
-  - lasse Jahr leer
-- Künstler nur eintragen, wenn:
-  - eindeutige Signatur sichtbar
-  ODER
-  - das Werk extrem bekannt und eindeutig identifizierbar ist.
+Die folgenden Angaben gelten als korrekt:
 
-- Maße niemals schätzen.
-- Standort niemals erfinden.
-- Rechte niemals erfinden.
+Künstler: {kuenstler}
+Titel: {titel}
+Jahr: {jahr}
 
-- Technik nur vorsichtig formulieren.
-- Beschreibung sachlich formulieren.
-
-- Schlagworte sollen möglichst enthalten:
-  - Künstlername (wenn vorhanden)
-  - Bildtitel (wenn vorhanden)
-  - Motiv
-  - Stil
-  - Technik
-  - Gattung
+Aufgabe:
+- Formuliere eine sachliche Beschreibung.
+- Erzeuge sinnvolle Schlagworte.
+- Schätze die Technik vorsichtig ein.
+- Keine erfundenen Zusatzinformationen.
 
 Gib ausschließlich gültiges JSON zurück.
 
 Schema:
-{
-  "kuenstler": "",
-  "titel": "",
-  "jahr": "",
+{{
   "technik": "",
   "beschreibung": "",
-  "schlagworte": "",
-  "einschaetzung": "sicher / wahrscheinlich / unsicher",
-  "begruendung": "",
-  "hinweise": ""
-}
+  "schlagworte": ""
+}}
 """
 
     response = client.responses.create(
@@ -338,15 +313,9 @@ Schema:
     except:
 
         return {
-            "kuenstler": "",
-            "titel": "",
-            "jahr": "",
             "technik": "",
             "beschreibung": text,
-            "schlagworte": "",
-            "einschaetzung": "unsicher",
-            "begruendung": "JSON konnte nicht gelesen werden",
-            "hinweise": ""
+            "schlagworte": ""
         }
 
 
@@ -421,6 +390,16 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
         "Neue Bilder hinzufügen"
     )
 
+    if st.button(
+        "← Zurück zum Archiv"
+    ):
+
+        st.session_state["seite"] = (
+            "Archiv durchsuchen"
+        )
+
+        st.rerun()
+
     uploaded_files = st.file_uploader(
         "Bilddateien auswählen",
         type=[
@@ -440,27 +419,15 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
     )
 
     kuenstler_neu = st.text_input(
-        "Künstler",
-        value=analyse.get(
-            "kuenstler",
-            ""
-        )
+        "Künstler"
     )
 
     titel_neu = st.text_input(
-        "Titel",
-        value=analyse.get(
-            "titel",
-            ""
-        )
+        "Titel"
     )
 
     jahr_neu = st.text_input(
-        "Jahr",
-        value=analyse.get(
-            "jahr",
-            ""
-        )
+        "Jahr"
     )
 
     technik_neu = st.text_input(
@@ -499,39 +466,6 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
         )
     )
 
-    if analyse:
-
-        st.info(
-            f"Einschätzung der KI: "
-            f"{analyse.get('einschaetzung', '')}"
-        )
-
-        st.caption(
-            analyse.get(
-                "begruendung",
-                ""
-            )
-        )
-
-        if analyse.get("hinweise"):
-
-            st.warning(
-                analyse.get(
-                    "hinweise",
-                    ""
-                )
-            )
-
-        if st.button(
-            "KI-Vorschlag verwerfen"
-        ):
-
-            st.session_state[
-                "ki_upload_analyse"
-            ] = {}
-
-            st.rerun()
-
     if uploaded_files:
 
         st.write(
@@ -539,7 +473,7 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
         )
 
         if st.button(
-            "KI-Recherche für erstes Bild starten"
+            "Beschreibung und Schlagworte erzeugen"
         ):
 
             erste_datei = uploaded_files[0]
@@ -550,10 +484,11 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
 
                 try:
 
-                    analyse = (
-                        ki_recherche_fuer_bild(
-                            erste_datei
-                        )
+                    analyse = ki_textgenerator(
+                        erste_datei,
+                        kuenstler_neu,
+                        titel_neu,
+                        jahr_neu
                     )
 
                     st.session_state[
@@ -565,7 +500,7 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
                 except Exception as e:
 
                     st.error(
-                        f"Fehler bei der KI-Recherche: {e}"
+                        f"Fehler bei der KI-Analyse: {e}"
                     )
 
         vorschau_spalten = st.columns(4)
@@ -667,6 +602,47 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
 
 else:
 
-    st.info(
-        "Archivansicht unverändert."
+    df = daten_laden()
+
+    st.write(
+        f"**{len(df)} Einträge gefunden**"
     )
+
+    for start in range(
+        0,
+        len(df),
+        3
+    ):
+
+        spalten = st.columns(3)
+
+        for i in range(3):
+
+            if start + i >= len(df):
+                continue
+
+            row = df.iloc[start + i]
+
+            with spalten[i]:
+
+                with st.container(
+                    border=True
+                ):
+
+                    st.image(
+                        row["bildpfad"],
+                        width=260
+                    )
+
+                    st.markdown(
+                        f"### "
+                        f"{kurzer_titel(row['titel'])}"
+                    )
+
+                    st.write(
+                        f"**{row['kuenstler']}**"
+                    )
+
+                    st.write(
+                        row["jahr"]
+                    )
