@@ -204,7 +204,79 @@ Wichtig:
             "schlagworte": "",
             "technik_stil": "",
         }
+def ki_recherche_fuer_bild(uploaded_file):
 
+    prompt = """
+Du bist Kunsthistoriker, Archivar und Bildrechercheur.
+
+Analysiere das hochgeladene Kunstwerk.
+
+WICHTIG:
+- Erfinde niemals Künstlernamen.
+- Erfinde niemals Bildtitel.
+- Erfinde niemals Datierungen.
+- Wenn du unsicher bist, formuliere das klar.
+- Gib nur Informationen an, die plausibel sind.
+
+Nutze:
+- Bildanalyse
+- kunsthistorische Stilmerkmale
+- sichtbare Signaturen
+- Motivik
+- mögliche Internetrecherchehinweise
+
+Gib ausschließlich gültiges JSON zurück.
+
+Schema:
+{
+  "kuenstler": "...",
+  "titel": "...",
+  "jahr": "...",
+  "technik": "...",
+  "beschreibung": "...",
+  "schlagworte": "...",
+  "einschaetzung": "sicher / wahrscheinlich / unsicher",
+  "begruendung": "..."
+}
+"""
+
+    response = client.responses.create(
+        model="gpt-4.1-mini",
+        input=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "input_text",
+                        "text": prompt
+                    },
+                    {
+                        "type": "input_image",
+                        "image_url": data_url
+                    },
+                ],
+            }
+        ],
+    )
+
+    text = response.output_text.strip()
+
+    try:
+
+        return json.loads(text)
+
+    except:
+
+        return {
+            "kuenstler": "",
+            "titel": "",
+            "jahr": "",
+            "technik": "",
+            "beschreibung": text,
+            "schlagworte": "",
+            "einschaetzung": "unsicher",
+            "begruendung": "JSON konnte nicht gelesen werden"
+        }
 
 def bild_nach_supabase(uploaded_file):
     suffix = Path(uploaded_file.name).suffix
@@ -250,17 +322,93 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
         accept_multiple_files=True,
     )
 
-    kuenstler_neu = st.text_input("Künstler")
-    titel_neu = st.text_input("Titel")
-    jahr_neu = st.text_input("Jahr")
-    technik_neu = st.text_input("Technik")
+   analyse = st.session_state.get(
+        "ki_upload_analyse",
+        {}
+    )
+
+    kuenstler_neu = st.text_input(
+        "Künstler",
+        value=analyse.get(
+            "kuenstler",
+            ""
+        )
+    )
+
+    titel_neu = st.text_input(
+        "Titel",
+        value=analyse.get(
+            "titel",
+            ""
+        )
+    )
+
+    jahr_neu = st.text_input(
+        "Jahr",
+        value=analyse.get(
+            "jahr",
+            ""
+        )
+    )
+
+    technik_neu = st.text_input(
+        "Technik",
+        value=analyse.get(
+            "technik",
+            ""
+        )
+    )
     masse_neu = st.text_input("Maße")
     standort_neu = st.text_input("Standort")
     rechte_neu = st.text_input("Rechte")
-    beschreibung_neu = st.text_area("Beschreibung")
-    schlagworte_neu = st.text_input("Schlagworte")
+    beschreibung_neu = st.text_area(
+        "Beschreibung",
+        value=analyse.get(
+            "beschreibung",
+            ""
+        )
+    )
+
+    schlagworte_neu = st.text_input(
+        "Schlagworte",
+        value=analyse.get(
+            "schlagworte",
+            ""
+        )
+    )
+	 if analyse:
+
+        st.info(
+            f"Einschätzung der KI: "
+            f"{analyse.get('einschaetzung', '')}"
+        )
+
+        st.caption(
+            analyse.get(
+                "begruendung",
+                ""
+            )
+        )
 
     if uploaded_files:
+	 if st.button(
+            "KI-Recherche starten"
+        ):
+
+            erste_datei = uploaded_files[0]
+
+            with st.spinner(
+                "KI analysiert das Bild..."
+            ):
+
+                analyse = ki_recherche_fuer_bild(
+                    erste_datei
+                )
+
+                st.session_state[
+                    "ki_upload_analyse"
+                ] = analyse
+
         st.write(f"{len(uploaded_files)} Bilddatei(en) ausgewählt")
 
         vorschau_spalten = st.columns(4)
