@@ -7,7 +7,6 @@ from pathlib import Path
 from io import BytesIO
 from supabase import create_client
 
-
 PASSWORT = "kunstarchiv2026"
 
 STIL_OPTIONEN = [
@@ -34,7 +33,6 @@ GATTUNG_OPTIONEN = [
     "Naturdarstellung", "Gesellschaftsszene",
 ]
 
-
 st.set_page_config(page_title="Kunstbild-Datenbank", layout="wide")
 
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
@@ -42,7 +40,6 @@ SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 SUPABASE_BUCKET = st.secrets["SUPABASE_BUCKET"]
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-
 
 st.markdown(
     """
@@ -65,6 +62,20 @@ st.markdown(
         object-fit: contain;
     }
 
+    .kunst-title {
+        height: 3.1em;
+        overflow: hidden;
+        font-size: 1.15rem;
+        font-weight: 700;
+        line-height: 1.25;
+        margin-bottom: 0.35rem;
+    }
+
+    .kunst-meta {
+        min-height: 5.2em;
+        font-size: 0.95rem;
+    }
+
     .stButton > button {
         width: 100%;
     }
@@ -81,7 +92,6 @@ st.markdown(
 def login_pruefen():
     st.title("Kunstbild-Datenbank")
     st.subheader("Geschützter Zugang")
-
     eingabe = st.text_input("Passwort eingeben", type="password")
 
     if eingabe == PASSWORT:
@@ -109,18 +119,13 @@ if not st.session_state["eingeloggt"]:
 
 
 st.title("Kunstbild-Datenbank")
-st.caption("Recherche, Vorschau, Upload, Export, KI-Analyse und Verwaltung deiner Kunstbilder")
+st.caption("Recherche, Vorschau, Upload, Export und Verwaltung deiner Kunstbilder")
 
 
 def text_zu_liste(text):
     if not text:
         return []
-
-    return [
-        eintrag.strip()
-        for eintrag in str(text).split(",")
-        if eintrag.strip()
-    ]
+    return [x.strip() for x in str(text).split(",") if x.strip()]
 
 
 def liste_zu_text(liste):
@@ -146,7 +151,7 @@ def daten_laden():
             ]
         )
 
-    for spalte in ["stile", "techniken", "gattungen", "thumbnailpfad"]:
+    for spalte in ["thumbnailpfad", "stile", "techniken", "gattungen"]:
         if spalte not in df.columns:
             df[spalte] = ""
 
@@ -155,6 +160,10 @@ def daten_laden():
 
 def datensatz_speichern(daten):
     supabase.table("kunstbilder").insert(daten).execute()
+
+
+def datensatz_aktualisieren(datensatz_id, daten):
+    supabase.table("kunstbilder").update(daten).eq("id", datensatz_id).execute()
 
 
 def datensatz_loeschen(datensatz_id, dateiname, thumbnailpfad=""):
@@ -177,16 +186,11 @@ def thumbnail_erzeugen(uploaded_file):
     bild = Image.open(BytesIO(uploaded_file.getvalue()))
     bild.thumbnail((600, 600))
 
-    thumbnail_buffer = BytesIO()
-    bild.save(
-        thumbnail_buffer,
-        format="JPEG",
-        quality=75,
-        optimize=True,
-    )
+    buffer = BytesIO()
+    bild.save(buffer, format="JPEG", quality=75, optimize=True)
+    buffer.seek(0)
 
-    thumbnail_buffer.seek(0)
-    return thumbnail_buffer.getvalue()
+    return buffer.getvalue()
 
 
 def bild_nach_supabase(uploaded_file):
@@ -215,12 +219,10 @@ def bild_nach_supabase(uploaded_file):
     return eindeutiger_name, public_url, thumbnail_url
 
 
-def kurzer_titel(text, max_laenge=18):
+def kurzer_titel(text, max_laenge=32):
     text = str(text)
-
     if len(text) > max_laenge:
         return text[:max_laenge] + "..."
-
     return text
 
 
@@ -336,25 +338,11 @@ else:
         df["kuenstler"].astype(str).unique().tolist()
     )
 
-    kuenstler_filter = st.sidebar.selectbox(
-        "Künstler",
-        kuenstler_liste,
-    )
+    kuenstler_filter = st.sidebar.selectbox("Künstler", kuenstler_liste)
 
-    stil_filter = st.sidebar.multiselect(
-        "Stil / Epoche",
-        STIL_OPTIONEN,
-    )
-
-    technik_filter = st.sidebar.multiselect(
-        "Techniken",
-        TECHNIK_OPTIONEN,
-    )
-
-    gattung_filter = st.sidebar.multiselect(
-        "Gattung / Motiv",
-        GATTUNG_OPTIONEN,
-    )
+    stil_filter = st.sidebar.multiselect("Stil / Epoche", STIL_OPTIONEN)
+    technik_filter = st.sidebar.multiselect("Techniken", TECHNIK_OPTIONEN)
+    gattung_filter = st.sidebar.multiselect("Gattung / Motiv", GATTUNG_OPTIONEN)
 
     gefiltert = df.copy()
 
@@ -362,10 +350,7 @@ else:
         suchbegriff = suchbegriff.lower()
         gefiltert = gefiltert[
             gefiltert.astype(str)
-            .apply(
-                lambda row: row.str.lower().str.contains(suchbegriff).any(),
-                axis=1,
-            )
+            .apply(lambda row: row.str.lower().str.contains(suchbegriff).any(), axis=1)
         ]
 
     if kuenstler_filter != "Alle":
@@ -398,7 +383,16 @@ else:
 
     st.write(f"**{len(gefiltert)} Einträge gefunden**")
 
-    if st.session_state["ansicht"] == "Galerieansicht":
+    ansicht = st.radio(
+        "Ansicht",
+        ["Galerieansicht", "Detailansicht"],
+        horizontal=True,
+        index=0 if st.session_state["ansicht"] == "Galerieansicht" else 1,
+    )
+
+    st.session_state["ansicht"] = ansicht
+
+    if ansicht == "Galerieansicht":
         for start in range(0, len(gefiltert), 3):
             spalten = st.columns(3)
 
@@ -408,11 +402,7 @@ else:
 
                 row = gefiltert.iloc[start + i]
 
-                bild_url = (
-                    row["thumbnailpfad"]
-                    if row["thumbnailpfad"]
-                    else row["bildpfad"]
-                )
+                bild_url = row["thumbnailpfad"] if row["thumbnailpfad"] else row["bildpfad"]
 
                 with spalten[i]:
                     with st.container(border=True):
@@ -455,15 +445,22 @@ else:
                                 st.success("Datensatz wurde gelöscht.")
                                 st.rerun()
 
-                        st.markdown(f"### {kurzer_titel(row['titel'])}")
-                        st.write(f"**{row['kuenstler']}**")
-                        st.write(row["jahr"])
+                        st.markdown(
+                            f'<div class="kunst-title">{kurzer_titel(row.get("titel", ""))}</div>',
+                            unsafe_allow_html=True,
+                        )
 
-                        if row.get("stile", ""):
-                            st.caption(f"Stil: {row.get('stile', '')}")
-
-                        if row.get("gattungen", ""):
-                            st.caption(f"Gattung: {row.get('gattungen', '')}")
+                        st.markdown(
+                            f"""
+                            <div class="kunst-meta">
+                            <strong>{row.get("kuenstler", "") or "&nbsp;"}</strong><br>
+                            {row.get("jahr", "") or "&nbsp;"}<br>
+                            Stil: {row.get("stile", "") or "—"}<br>
+                            Gattung: {row.get("gattungen", "") or "—"}
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
 
     else:
         if len(gefiltert) == 0:
@@ -482,12 +479,7 @@ else:
                         vorauswahl_index = idx
                         break
 
-            auswahl = st.selectbox(
-                "Werk auswählen",
-                auswahl_liste,
-                index=vorauswahl_index,
-            )
-
+            auswahl = st.selectbox("Werk auswählen", auswahl_liste, index=vorauswahl_index)
             index = auswahl_liste.index(auswahl)
             row = gefiltert.iloc[index]
 
@@ -499,6 +491,19 @@ else:
 
             with col1:
                 st.image(row["bildpfad"], use_container_width=True)
+
+                try:
+                    bild_download = requests.get(row["bildpfad"], timeout=20).content
+
+                    st.download_button(
+                        label="Bild herunterladen",
+                        data=bild_download,
+                        file_name=str(row["dateiname"]),
+                        mime="application/octet-stream",
+                        key=f"detail_download_{row['id']}",
+                    )
+                except Exception:
+                    st.info("Download aktuell nicht verfügbar.")
 
             with col2:
                 st.header(str(row.get("titel", "")))
@@ -514,6 +519,61 @@ else:
                 st.write(f"**Gattung / Motiv:** {row.get('gattungen', '')}")
                 st.write(f"**Beschreibung:** {row.get('beschreibung', '')}")
                 st.write(f"**Schlagworte:** {row.get('schlagworte', '')}")
+
+                st.divider()
+
+                with st.expander("Datensatz bearbeiten"):
+                    with st.form(key=f"bearbeiten_form_{row['id']}"):
+                        bearb_kuenstler = st.text_input("Künstler", value=str(row.get("kuenstler", "")))
+                        bearb_titel = st.text_input("Titel", value=str(row.get("titel", "")))
+                        bearb_jahr = st.text_input("Jahr", value=str(row.get("jahr", "")))
+                        bearb_technik = st.text_input("Technik", value=str(row.get("technik", "")))
+                        bearb_masse = st.text_input("Maße", value=str(row.get("masse", "")))
+                        bearb_standort = st.text_input("Standort", value=str(row.get("standort", "")))
+                        bearb_rechte = st.text_input("Rechte", value=str(row.get("rechte", "")))
+
+                        bearb_stile = st.multiselect(
+                            "Stil / Epoche",
+                            STIL_OPTIONEN,
+                            default=text_zu_liste(row.get("stile", "")),
+                        )
+
+                        bearb_techniken = st.multiselect(
+                            "Techniken",
+                            TECHNIK_OPTIONEN,
+                            default=text_zu_liste(row.get("techniken", "")),
+                        )
+
+                        bearb_gattungen = st.multiselect(
+                            "Gattung / Motiv",
+                            GATTUNG_OPTIONEN,
+                            default=text_zu_liste(row.get("gattungen", "")),
+                        )
+
+                        bearb_beschreibung = st.text_area("Beschreibung", value=str(row.get("beschreibung", "")))
+                        bearb_schlagworte = st.text_input("Schlagworte", value=str(row.get("schlagworte", "")))
+
+                        speichern = st.form_submit_button("Änderungen speichern")
+
+                    if speichern:
+                        neue_daten = {
+                            "kuenstler": bearb_kuenstler,
+                            "titel": bearb_titel,
+                            "jahr": bearb_jahr,
+                            "technik": bearb_technik,
+                            "masse": bearb_masse,
+                            "standort": bearb_standort,
+                            "rechte": bearb_rechte,
+                            "beschreibung": bearb_beschreibung,
+                            "schlagworte": bearb_schlagworte,
+                            "stile": liste_zu_text(bearb_stile),
+                            "techniken": liste_zu_text(bearb_techniken),
+                            "gattungen": liste_zu_text(bearb_gattungen),
+                        }
+
+                        datensatz_aktualisieren(row["id"], neue_daten)
+                        st.success("Änderungen wurden gespeichert.")
+                        st.rerun()
 
                 st.divider()
 
