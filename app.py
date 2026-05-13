@@ -314,15 +314,23 @@ with st.sidebar:
 
 
 if st.session_state["seite"] == "Neues Bild hinzufügen":
+
     st.header("Neue Bilder hinzufügen")
 
     uploaded_files = st.file_uploader(
         "Bilddateien auswählen",
-        type=["jpg", "jpeg", "png", "webp", "tif", "tiff"],
+        type=[
+            "jpg",
+            "jpeg",
+            "png",
+            "webp",
+            "tif",
+            "tiff"
+        ],
         accept_multiple_files=True,
     )
 
-   analyse = st.session_state.get(
+    analyse = st.session_state.get(
         "ki_upload_analyse",
         {}
     )
@@ -358,9 +366,19 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
             ""
         )
     )
-    masse_neu = st.text_input("Maße")
-    standort_neu = st.text_input("Standort")
-    rechte_neu = st.text_input("Rechte")
+
+    masse_neu = st.text_input(
+        "Maße"
+    )
+
+    standort_neu = st.text_input(
+        "Standort"
+    )
+
+    rechte_neu = st.text_input(
+        "Rechte"
+    )
+
     beschreibung_neu = st.text_area(
         "Beschreibung",
         value=analyse.get(
@@ -376,7 +394,8 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
             ""
         )
     )
-	 if analyse:
+
+    if analyse:
 
         st.info(
             f"Einschätzung der KI: "
@@ -391,7 +410,8 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
         )
 
     if uploaded_files:
-	 if st.button(
+
+        if st.button(
             "KI-Recherche starten"
         ):
 
@@ -409,18 +429,103 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
                     "ki_upload_analyse"
                 ] = analyse
 
-        st.write(f"{len(uploaded_files)} Bilddatei(en) ausgewählt")
+                st.rerun()
+
+        st.write(
+            f"{len(uploaded_files)} Bilddatei(en) ausgewählt"
+        )
 
         vorschau_spalten = st.columns(4)
 
         for index, datei in enumerate(uploaded_files):
-            with vorschau_spalten[index % 4]:
-                st.image(datei, width=150)
-                st.caption(datei.name)
 
-    if st.button("Bilder und Datensätze speichern"):
+            with vorschau_spalten[index % 4]:
+
+                st.image(
+                    datei,
+                    width=150
+                )
+
+                st.caption(
+                    datei.name
+                )
+
+    if st.button(
+        "Bilder und Datensätze speichern"
+    ):
+
         if not uploaded_files:
-            st.error("Bitte zuerst Bilddateien auswählen.")
+
+            st.error(
+                "Bitte zuerst Bilddateien auswählen."
+            )
+
+        else:
+
+            gespeichert = 0
+
+            for uploaded_file in uploaded_files:
+
+                (
+                    eindeutiger_name,
+                    public_url
+                ) = bild_nach_supabase(
+                    uploaded_file
+                )
+
+                daten = {
+                    "dateiname":
+                    eindeutiger_name,
+
+                    "kuenstler":
+                    kuenstler_neu,
+
+                    "titel":
+                    titel_neu if titel_neu
+                    else Path(
+                        uploaded_file.name
+                    ).stem,
+
+                    "jahr":
+                    jahr_neu,
+
+                    "technik":
+                    technik_neu,
+
+                    "masse":
+                    masse_neu,
+
+                    "standort":
+                    standort_neu,
+
+                    "rechte":
+                    rechte_neu,
+
+                    "beschreibung":
+                    beschreibung_neu,
+
+                    "schlagworte":
+                    schlagworte_neu,
+
+                    "bildpfad":
+                    public_url,
+                }
+
+                datensatz_speichern(
+                    daten
+                )
+
+                gespeichert += 1
+
+            st.success(
+                f"{gespeichert} Bilder gespeichert."
+            )
+
+            st.session_state["seite"] = (
+                "Archiv durchsuchen"
+            )
+
+            st.rerun()
         else:
             gespeichert = 0
 
