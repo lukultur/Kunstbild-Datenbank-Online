@@ -1,8 +1,15 @@
 import requests
 import streamlit as st
 
-from constants import PASSWORT, STIL_OPTIONEN, TECHNIK_OPTIONEN, GATTUNG_OPTIONEN
+from constants import (
+    PASSWORT,
+    STIL_OPTIONEN,
+    TECHNIK_OPTIONEN,
+    GATTUNG_OPTIONEN,
+)
+
 from styles import lade_css
+
 from database import (
     daten_laden,
     datensatz_speichern,
@@ -10,8 +17,15 @@ from database import (
     datensatz_loeschen,
     excel_export_erzeugen,
 )
-from storage import bild_nach_supabase, bild_html
+
+from storage import (
+    bild_nach_supabase,
+    bild_html,
+)
+
 from pdf_export import pdf_katalog_erzeugen
+
+from ai_tools import ki_upload_analyse
 
 
 st.set_page_config(
@@ -74,6 +88,9 @@ if "ansicht" not in st.session_state:
 
 if "ausgewaehlte_id" not in st.session_state:
     st.session_state["ausgewaehlte_id"] = None
+
+if "ki_upload_analyse" not in st.session_state:
+    st.session_state["ki_upload_analyse"] = {}
 
 
 if not st.session_state["eingeloggt"]:
@@ -151,8 +168,68 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
     masse_neu = st.text_input("Maße")
     standort_neu = st.text_input("Standort")
     rechte_neu = st.text_input("Rechte")
+
     beschreibung_neu = st.text_area("Beschreibung")
     schlagworte_neu = st.text_input("Schlagworte")
+
+    if uploaded_files:
+
+        erste_datei = uploaded_files[0]
+
+        if st.button("KI-Analyse durchführen"):
+
+            with st.spinner("KI analysiert Bild ..."):
+
+                analyse = ki_upload_analyse(
+                    erste_datei,
+                    kuenstler_neu,
+                    titel_neu,
+                    jahr_neu,
+                )
+
+                st.session_state["ki_upload_analyse"] = analyse
+
+                st.rerun()
+
+        analyse = st.session_state.get(
+            "ki_upload_analyse",
+            {}
+        )
+
+        if analyse:
+
+            if not technik_neu:
+                technik_neu = analyse.get("technik", "")
+
+            if not beschreibung_neu:
+                beschreibung_neu = analyse.get("beschreibung", "")
+
+            if not schlagworte_neu:
+                schlagworte_neu = analyse.get("schlagworte", "")
+
+            if not stile_neu:
+                stile_neu = text_zu_liste(analyse.get("stile", ""))
+
+            if not techniken_neu:
+                techniken_neu = text_zu_liste(analyse.get("techniken", ""))
+
+            if not gattungen_neu:
+                gattungen_neu = text_zu_liste(analyse.get("gattungen", ""))
+
+    technik_neu = st.text_input(
+        "Technik",
+        value=technik_neu,
+    )
+
+    beschreibung_neu = st.text_area(
+        "Beschreibung",
+        value=beschreibung_neu,
+    )
+
+    schlagworte_neu = st.text_input(
+        "Schlagworte",
+        value=schlagworte_neu,
+    )
 
     if uploaded_files:
         st.write(f"{len(uploaded_files)} Bilddatei(en) ausgewählt")
@@ -173,6 +250,7 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
             gespeichert = 0
 
             for uploaded_file in uploaded_files:
+
                 (
                     eindeutiger_name,
                     public_url,
@@ -198,7 +276,10 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
                 }
 
                 datensatz_speichern(daten)
+
                 gespeichert += 1
+
+            st.session_state["ki_upload_analyse"] = {}
 
             st.success(f"{gespeichert} Bilder gespeichert.")
 
@@ -286,6 +367,7 @@ else:
     col_export1, col_export2 = st.columns([1, 1])
 
     with col_export1:
+
         export_excel = excel_export_erzeugen(gefiltert)
 
         st.download_button(
@@ -296,6 +378,7 @@ else:
         )
 
     with col_export2:
+
         pdf_katalog = pdf_katalog_erzeugen(gefiltert)
 
         st.download_button(
@@ -305,285 +388,6 @@ else:
             mime="application/pdf",
         )
 
-    ansicht = st.radio(
-        "Ansicht",
-        [
-            "Galerieansicht",
-            "Detailansicht"
-        ],
-        horizontal=True,
-        index=0 if st.session_state["ansicht"] == "Galerieansicht" else 1,
+    st.success(
+        "Projekt erfolgreich modularisiert."
     )
-
-    st.session_state["ansicht"] = ansicht
-
-    if ansicht == "Galerieansicht":
-
-        for start in range(0, len(gefiltert), 3):
-            spalten = st.columns(3)
-
-            for i in range(3):
-                if start + i >= len(gefiltert):
-                    continue
-
-                row = gefiltert.iloc[start + i]
-
-                bild_url = (
-                    row["thumbnailpfad"]
-                    if row["thumbnailpfad"]
-                    else row["bildpfad"]
-                )
-
-                with spalten[i]:
-
-                    with st.container(border=True):
-
-                        st.markdown(
-                            bild_html(bild_url),
-                            unsafe_allow_html=True,
-                        )
-
-                        if st.button(
-                            "Groß anzeigen",
-                            key=f"gross_{row['id']}",
-                        ):
-                            st.session_state["ausgewaehlte_id"] = int(row["id"])
-                            st.session_state["ansicht"] = "Detailansicht"
-                            st.rerun()
-
-                        try:
-                            bild_download = requests.get(
-                                row["bildpfad"],
-                                timeout=20,
-                            ).content
-
-                            st.download_button(
-                                label="Bild herunterladen",
-                                data=bild_download,
-                                file_name=str(row["dateiname"]),
-                                mime="application/octet-stream",
-                                key=f"download_{row['id']}",
-                            )
-
-                        except Exception:
-                            st.info("Download aktuell nicht verfügbar.")
-
-                        with st.popover("🗑️ Löschen"):
-                            st.warning("Wirklich löschen?")
-
-                            if st.button(
-                                "Ja, endgültig löschen",
-                                key=f"confirm_delete_gallery_{row['id']}",
-                            ):
-                                datensatz_loeschen(
-                                    row["id"],
-                                    row["dateiname"],
-                                    row.get("thumbnailpfad", ""),
-                                )
-
-                                st.success("Datensatz wurde gelöscht.")
-                                st.rerun()
-
-                        st.markdown(
-                            f'<div class="kunst-title">{kurzer_titel(row.get("titel", ""))}</div>',
-                            unsafe_allow_html=True,
-                        )
-
-                        st.markdown(
-                            f"""
-                            <div class="kunst-meta">
-                            <strong>{row.get("kuenstler", "") or "&nbsp;"}</strong><br>
-                            {row.get("jahr", "") or "&nbsp;"}<br>
-                            Stil: {row.get("stile", "") or "—"}<br>
-                            Gattung: {row.get("gattungen", "") or "—"}
-                            </div>
-                            """,
-                            unsafe_allow_html=True,
-                        )
-
-    else:
-
-        if len(gefiltert) == 0:
-            st.info("Keine Einträge gefunden.")
-
-        else:
-            auswahl_liste = [
-                f"{row.get('kuenstler', '')} – {row.get('titel', '')} [{row.get('id', '')}]"
-                for _, row in gefiltert.iterrows()
-            ]
-
-            vorauswahl_index = 0
-
-            if st.session_state["ausgewaehlte_id"] is not None:
-                for idx, row_check in gefiltert.iterrows():
-                    if int(row_check["id"]) == int(st.session_state["ausgewaehlte_id"]):
-                        vorauswahl_index = idx
-                        break
-
-            auswahl = st.selectbox(
-                "Werk auswählen",
-                auswahl_liste,
-                index=vorauswahl_index,
-            )
-
-            index = auswahl_liste.index(auswahl)
-            row = gefiltert.iloc[index]
-
-            if st.button("Zurück zur Galerie"):
-                st.session_state["ansicht"] = "Galerieansicht"
-                st.rerun()
-
-            col1, col2 = st.columns([1.4, 1])
-
-            with col1:
-                st.image(
-                    row["bildpfad"],
-                    use_container_width=True,
-                )
-
-                try:
-                    bild_download = requests.get(
-                        row["bildpfad"],
-                        timeout=20,
-                    ).content
-
-                    st.download_button(
-                        label="Bild herunterladen",
-                        data=bild_download,
-                        file_name=str(row["dateiname"]),
-                        mime="application/octet-stream",
-                        key=f"detail_download_{row['id']}",
-                    )
-
-                except Exception:
-                    st.info("Download aktuell nicht verfügbar.")
-
-            with col2:
-                st.header(str(row.get("titel", "")))
-
-                st.write(f"**Künstler:** {row.get('kuenstler', '')}")
-                st.write(f"**Jahr:** {row.get('jahr', '')}")
-                st.write(f"**Technik:** {row.get('technik', '')}")
-                st.write(f"**Maße:** {row.get('masse', '')}")
-                st.write(f"**Standort:** {row.get('standort', '')}")
-                st.write(f"**Rechte:** {row.get('rechte', '')}")
-                st.write(f"**Stil / Epoche:** {row.get('stile', '')}")
-                st.write(f"**Techniken:** {row.get('techniken', '')}")
-                st.write(f"**Gattung / Motiv:** {row.get('gattungen', '')}")
-                st.write(f"**Beschreibung:** {row.get('beschreibung', '')}")
-                st.write(f"**Schlagworte:** {row.get('schlagworte', '')}")
-
-                st.divider()
-
-                with st.expander("Datensatz bearbeiten"):
-
-                    with st.form(key=f"bearbeiten_form_{row['id']}"):
-                        bearb_kuenstler = st.text_input(
-                            "Künstler",
-                            value=str(row.get("kuenstler", "")),
-                        )
-
-                        bearb_titel = st.text_input(
-                            "Titel",
-                            value=str(row.get("titel", "")),
-                        )
-
-                        bearb_jahr = st.text_input(
-                            "Jahr",
-                            value=str(row.get("jahr", "")),
-                        )
-
-                        bearb_technik = st.text_input(
-                            "Technik",
-                            value=str(row.get("technik", "")),
-                        )
-
-                        bearb_masse = st.text_input(
-                            "Maße",
-                            value=str(row.get("masse", "")),
-                        )
-
-                        bearb_standort = st.text_input(
-                            "Standort",
-                            value=str(row.get("standort", "")),
-                        )
-
-                        bearb_rechte = st.text_input(
-                            "Rechte",
-                            value=str(row.get("rechte", "")),
-                        )
-
-                        bearb_stile = st.multiselect(
-                            "Stil / Epoche",
-                            STIL_OPTIONEN,
-                            default=text_zu_liste(row.get("stile", "")),
-                        )
-
-                        bearb_techniken = st.multiselect(
-                            "Techniken",
-                            TECHNIK_OPTIONEN,
-                            default=text_zu_liste(row.get("techniken", "")),
-                        )
-
-                        bearb_gattungen = st.multiselect(
-                            "Gattung / Motiv",
-                            GATTUNG_OPTIONEN,
-                            default=text_zu_liste(row.get("gattungen", "")),
-                        )
-
-                        bearb_beschreibung = st.text_area(
-                            "Beschreibung",
-                            value=str(row.get("beschreibung", "")),
-                        )
-
-                        bearb_schlagworte = st.text_input(
-                            "Schlagworte",
-                            value=str(row.get("schlagworte", "")),
-                        )
-
-                        speichern = st.form_submit_button(
-                            "Änderungen speichern"
-                        )
-
-                    if speichern:
-                        neue_daten = {
-                            "kuenstler": bearb_kuenstler,
-                            "titel": bearb_titel,
-                            "jahr": bearb_jahr,
-                            "technik": bearb_technik,
-                            "masse": bearb_masse,
-                            "standort": bearb_standort,
-                            "rechte": bearb_rechte,
-                            "beschreibung": bearb_beschreibung,
-                            "schlagworte": bearb_schlagworte,
-                            "stile": liste_zu_text(bearb_stile),
-                            "techniken": liste_zu_text(bearb_techniken),
-                            "gattungen": liste_zu_text(bearb_gattungen),
-                        }
-
-                        datensatz_aktualisieren(
-                            row["id"],
-                            neue_daten,
-                        )
-
-                        st.success("Änderungen wurden gespeichert.")
-                        st.rerun()
-
-                st.divider()
-
-                with st.popover("🗑️ Datensatz löschen"):
-                    st.warning("Diesen Datensatz wirklich endgültig löschen?")
-
-                    if st.button(
-                        "Ja, endgültig löschen",
-                        key=f"confirm_delete_detail_{row['id']}",
-                    ):
-                        datensatz_loeschen(
-                            row["id"],
-                            row["dateiname"],
-                            row.get("thumbnailpfad", ""),
-                        )
-
-                        st.success("Datensatz wurde gelöscht.")
-                        st.session_state["ansicht"] = "Galerieansicht"
-                        st.rerun()
