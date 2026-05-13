@@ -1,109 +1,64 @@
-from PIL import Image
-import streamlit as st
-import pandas as pd
-import uuid
 import requests
-from pathlib import Path
-from io import BytesIO
-from supabase import create_client
+import streamlit as st
 
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import cm
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image as RLImage, PageBreak
-from reportlab.lib.enums import TA_LEFT
-
-
-PASSWORT = "kunstarchiv2026"
-
-STIL_OPTIONEN = [
-    "Renaissance", "Barock", "Klassizismus", "Romantik", "Realismus",
-    "Impressionismus", "Expressionismus", "Kubismus", "Fauvismus",
-    "Surrealismus", "Abstrakte Kunst", "Pop Art", "Fotorealismus",
-    "Neue Sachlichkeit", "Verismus", "Symbolismus", "Jugendstil",
-    "Dadaismus", "Konstruktivismus", "Minimalismus", "Konzeptkunst",
-    "Informel", "Tachismus", "Arte Povera", "Op Art", "Land Art",
-    "Street Art", "Zeitgenössische Kunst",
-]
-
-TECHNIK_OPTIONEN = [
-    "Ölmalerei", "Acrylmalerei", "Aquarellmalerei", "Pastellmalerei",
-    "Gouache", "Tempera", "Mischtechnik", "Collage", "Tusche",
-    "Zeichnung", "Kohle", "Radierung", "Lithografie", "Siebdruck",
-    "Fotografie", "Digitale Kunst",
-]
-
-GATTUNG_OPTIONEN = [
-    "Porträt", "Selbstporträt", "Landschaft", "Stadtansicht",
-    "Stillleben", "Akt", "Interieur", "Tierdarstellung",
-    "Historienbild", "Religiöses Motiv", "Abstrakt", "Architektur",
-    "Naturdarstellung", "Gesellschaftsszene",
-]
-
-st.set_page_config(page_title="Kunstbild-Datenbank", layout="wide")
-
-SUPABASE_URL = st.secrets["SUPABASE_URL"]
-SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
-SUPABASE_BUCKET = st.secrets["SUPABASE_BUCKET"]
-
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-st.markdown(
-    """
-    <style>
-    .fixed-image-box {
-        width: 100%;
-        height: 260px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #f7f7f7;
-        border-radius: 8px;
-        overflow: hidden;
-        margin-bottom: 0.75rem;
-    }
-
-    .fixed-image-box img {
-        max-width: 100%;
-        max-height: 100%;
-        object-fit: contain;
-    }
-
-    .kunst-title {
-        height: 3.1em;
-        overflow: hidden;
-        font-size: 1.15rem;
-        font-weight: 700;
-        line-height: 1.25;
-        margin-bottom: 0.35rem;
-    }
-
-    .kunst-meta {
-        min-height: 5.2em;
-        font-size: 0.95rem;
-    }
-
-    .stButton > button {
-        width: 100%;
-    }
-
-    .stDownloadButton > button {
-        width: 100%;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
+from constants import PASSWORT, STIL_OPTIONEN, TECHNIK_OPTIONEN, GATTUNG_OPTIONEN
+from styles import lade_css
+from database import (
+    daten_laden,
+    datensatz_speichern,
+    datensatz_aktualisieren,
+    datensatz_loeschen,
+    excel_export_erzeugen,
 )
+from storage import bild_nach_supabase, bild_html
+from pdf_export import pdf_katalog_erzeugen
+
+
+st.set_page_config(
+    page_title="Kunstbild-Datenbank",
+    layout="wide"
+)
+
+lade_css()
+
+
+def text_zu_liste(text):
+    if not text:
+        return []
+
+    return [
+        x.strip()
+        for x in str(text).split(",")
+        if x.strip()
+    ]
+
+
+def liste_zu_text(liste):
+    return ", ".join(liste)
+
+
+def kurzer_titel(text, max_laenge=32):
+    text = str(text)
+
+    if len(text) > max_laenge:
+        return text[:max_laenge] + "..."
+
+    return text
 
 
 def login_pruefen():
     st.title("Kunstbild-Datenbank")
     st.subheader("Geschützter Zugang")
-    eingabe = st.text_input("Passwort eingeben", type="password")
+
+    eingabe = st.text_input(
+        "Passwort eingeben",
+        type="password"
+    )
 
     if eingabe == PASSWORT:
         st.session_state["eingeloggt"] = True
         st.rerun()
+
     elif eingabe:
         st.error("Falsches Passwort.")
 
@@ -120,6 +75,7 @@ if "ansicht" not in st.session_state:
 if "ausgewaehlte_id" not in st.session_state:
     st.session_state["ausgewaehlte_id"] = None
 
+
 if not st.session_state["eingeloggt"]:
     login_pruefen()
     st.stop()
@@ -129,275 +85,15 @@ st.title("Kunstbild-Datenbank")
 st.caption("Recherche, Vorschau, Upload, Export und Verwaltung deiner Kunstbilder")
 
 
-def text_zu_liste(text):
-    if not text:
-        return []
-    return [x.strip() for x in str(text).split(",") if x.strip()]
-
-
-def liste_zu_text(liste):
-    return ", ".join(liste)
-
-
-def daten_laden():
-    response = (
-        supabase.table("kunstbilder")
-        .select("*")
-        .order("titel")
-        .execute()
-    )
-
-    df = pd.DataFrame(response.data)
-
-    if df.empty:
-        df = pd.DataFrame(
-            columns=[
-                "id", "dateiname", "kuenstler", "titel", "jahr", "technik",
-                "masse", "standort", "rechte", "beschreibung", "schlagworte",
-                "bildpfad", "thumbnailpfad", "stile", "techniken", "gattungen",
-            ]
-        )
-
-    for spalte in ["thumbnailpfad", "stile", "techniken", "gattungen"]:
-        if spalte not in df.columns:
-            df[spalte] = ""
-
-    return df.fillna("")
-
-
-def excel_export_erzeugen(df):
-    export_df = df.drop(columns=["id"], errors="ignore")
-    output = BytesIO()
-
-    with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        export_df.to_excel(writer, index=False, sheet_name="Kunstbilder")
-
-    output.seek(0)
-    return output
-
-
-def pdf_katalog_erzeugen(df):
-    output = BytesIO()
-
-    doc = SimpleDocTemplate(
-        output,
-        pagesize=A4,
-        rightMargin=1.8 * cm,
-        leftMargin=1.8 * cm,
-        topMargin=1.8 * cm,
-        bottomMargin=1.8 * cm,
-    )
-
-    styles = getSampleStyleSheet()
-
-    titel_style = ParagraphStyle(
-        "KatalogTitel",
-        parent=styles["Title"],
-        fontName="Helvetica-Bold",
-        fontSize=20,
-        leading=24,
-        alignment=TA_LEFT,
-        spaceAfter=18,
-    )
-
-    werk_titel_style = ParagraphStyle(
-        "WerkTitel",
-        parent=styles["Heading2"],
-        fontName="Helvetica-Bold",
-        fontSize=15,
-        leading=18,
-        spaceBefore=8,
-        spaceAfter=6,
-    )
-
-    meta_style = ParagraphStyle(
-        "Meta",
-        parent=styles["Normal"],
-        fontName="Helvetica",
-        fontSize=9,
-        leading=12,
-        spaceAfter=4,
-    )
-
-    text_style = ParagraphStyle(
-        "Beschreibung",
-        parent=styles["Normal"],
-        fontName="Helvetica",
-        fontSize=10,
-        leading=14,
-        spaceBefore=6,
-        spaceAfter=10,
-    )
-
-    story = []
-
-    story.append(Paragraph("Kunstbild-Datenbank – Werkverzeichnis", titel_style))
-    story.append(Paragraph(f"Ausgewählte Werke: {len(df)}", meta_style))
-    story.append(Spacer(1, 0.5 * cm))
-
-    for index, row in df.iterrows():
-        titel = str(row.get("titel", "") or "Ohne Titel")
-        kuenstler = str(row.get("kuenstler", "") or "")
-        jahr = str(row.get("jahr", "") or "")
-        technik = str(row.get("technik", "") or "")
-        masse = str(row.get("masse", "") or "")
-        stile = str(row.get("stile", "") or "")
-        techniken = str(row.get("techniken", "") or "")
-        gattungen = str(row.get("gattungen", "") or "")
-        beschreibung = str(row.get("beschreibung", "") or "")
-        schlagworte = str(row.get("schlagworte", "") or "")
-        bild_url = str(row.get("thumbnailpfad", "") or row.get("bildpfad", ""))
-
-        story.append(Paragraph(titel, werk_titel_style))
-
-        if bild_url:
-            try:
-                response = requests.get(bild_url, timeout=20)
-                image_bytes = BytesIO(response.content)
-
-                pil_img = Image.open(image_bytes)
-                width, height = pil_img.size
-
-                max_width = 14 * cm
-                max_height = 9 * cm
-
-                ratio = min(max_width / width, max_height / height)
-                img_width = width * ratio
-                img_height = height * ratio
-
-                image_bytes.seek(0)
-
-                story.append(
-                    RLImage(
-                        image_bytes,
-                        width=img_width,
-                        height=img_height,
-                    )
-                )
-
-                story.append(Spacer(1, 0.25 * cm))
-
-            except Exception:
-                story.append(Paragraph("[Bild konnte nicht geladen werden]", meta_style))
-
-        if kuenstler:
-            story.append(Paragraph(f"<b>Künstler:</b> {kuenstler}", meta_style))
-
-        if jahr:
-            story.append(Paragraph(f"<b>Jahr:</b> {jahr}", meta_style))
-
-        if technik:
-            story.append(Paragraph(f"<b>Technik:</b> {technik}", meta_style))
-
-        if masse:
-            story.append(Paragraph(f"<b>Maße:</b> {masse}", meta_style))
-
-        if stile:
-            story.append(Paragraph(f"<b>Stil / Epoche:</b> {stile}", meta_style))
-
-        if techniken:
-            story.append(Paragraph(f"<b>Techniken:</b> {techniken}", meta_style))
-
-        if gattungen:
-            story.append(Paragraph(f"<b>Gattung / Motiv:</b> {gattungen}", meta_style))
-
-        if beschreibung:
-            story.append(Paragraph(f"<b>Beschreibung:</b><br/>{beschreibung}", text_style))
-
-        if schlagworte:
-            story.append(Paragraph(f"<b>Schlagworte:</b> {schlagworte}", meta_style))
-
-        if index < len(df) - 1:
-            story.append(PageBreak())
-
-    doc.build(story)
-
-    output.seek(0)
-    return output
-
-
-def datensatz_speichern(daten):
-    supabase.table("kunstbilder").insert(daten).execute()
-
-
-def datensatz_aktualisieren(datensatz_id, daten):
-    supabase.table("kunstbilder").update(daten).eq("id", datensatz_id).execute()
-
-
-def datensatz_loeschen(datensatz_id, dateiname, thumbnailpfad=""):
-    try:
-        supabase.storage.from_(SUPABASE_BUCKET).remove([str(dateiname)])
-    except Exception:
-        pass
-
-    try:
-        if thumbnailpfad:
-            thumb_name = str(thumbnailpfad).split("/")[-1]
-            supabase.storage.from_(SUPABASE_BUCKET).remove([thumb_name])
-    except Exception:
-        pass
-
-    supabase.table("kunstbilder").delete().eq("id", datensatz_id).execute()
-
-
-def thumbnail_erzeugen(uploaded_file):
-    bild = Image.open(BytesIO(uploaded_file.getvalue()))
-    bild.thumbnail((600, 600))
-
-    buffer = BytesIO()
-    bild.save(buffer, format="JPEG", quality=75, optimize=True)
-    buffer.seek(0)
-
-    return buffer.getvalue()
-
-
-def bild_nach_supabase(uploaded_file):
-    suffix = Path(uploaded_file.name).suffix
-    eindeutiger_name = f"{uuid.uuid4()}{suffix}"
-    thumbnail_name = f"thumb_{uuid.uuid4()}.jpg"
-
-    file_bytes = uploaded_file.getvalue()
-    thumbnail_bytes = thumbnail_erzeugen(uploaded_file)
-
-    supabase.storage.from_(SUPABASE_BUCKET).upload(
-        eindeutiger_name,
-        file_bytes,
-        {"content-type": uploaded_file.type},
-    )
-
-    supabase.storage.from_(SUPABASE_BUCKET).upload(
-        thumbnail_name,
-        thumbnail_bytes,
-        {"content-type": "image/jpeg"},
-    )
-
-    public_url = supabase.storage.from_(SUPABASE_BUCKET).get_public_url(eindeutiger_name)
-    thumbnail_url = supabase.storage.from_(SUPABASE_BUCKET).get_public_url(thumbnail_name)
-
-    return eindeutiger_name, public_url, thumbnail_url
-
-
-def kurzer_titel(text, max_laenge=32):
-    text = str(text)
-    if len(text) > max_laenge:
-        return text[:max_laenge] + "..."
-    return text
-
-
-def bild_html(url):
-    return f"""
-    <div class="fixed-image-box">
-        <img src="{url}">
-    </div>
-    """
-
-
 with st.sidebar:
     st.header("Navigation")
 
     seite = st.radio(
         "Bereich wählen",
-        ["Archiv durchsuchen", "Neues Bild hinzufügen"],
+        [
+            "Archiv durchsuchen",
+            "Neues Bild hinzufügen"
+        ],
         index=0 if st.session_state["seite"] == "Archiv durchsuchen" else 1,
     )
 
@@ -411,6 +107,7 @@ with st.sidebar:
 
 
 if st.session_state["seite"] == "Neues Bild hinzufügen":
+
     st.header("Neue Bilder hinzufügen")
 
     if st.button("← Zurück zum Archiv"):
@@ -420,7 +117,14 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
 
     uploaded_files = st.file_uploader(
         "Bilddateien auswählen",
-        type=["jpg", "jpeg", "png", "webp", "tif", "tiff"],
+        type=[
+            "jpg",
+            "jpeg",
+            "png",
+            "webp",
+            "tif",
+            "tiff"
+        ],
         accept_multiple_files=True,
     )
 
@@ -428,9 +132,20 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
     titel_neu = st.text_input("Titel")
     jahr_neu = st.text_input("Jahr")
 
-    stile_neu = st.multiselect("Stil / Epoche", STIL_OPTIONEN)
-    techniken_neu = st.multiselect("Techniken", TECHNIK_OPTIONEN)
-    gattungen_neu = st.multiselect("Gattung / Motiv", GATTUNG_OPTIONEN)
+    stile_neu = st.multiselect(
+        "Stil / Epoche",
+        STIL_OPTIONEN,
+    )
+
+    techniken_neu = st.multiselect(
+        "Techniken",
+        TECHNIK_OPTIONEN,
+    )
+
+    gattungen_neu = st.multiselect(
+        "Gattung / Motiv",
+        GATTUNG_OPTIONEN,
+    )
 
     technik_neu = st.text_input("Technik")
     masse_neu = st.text_input("Maße")
@@ -450,18 +165,24 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
                 st.caption(datei.name)
 
     if st.button("Bilder und Datensätze speichern"):
+
         if not uploaded_files:
             st.error("Bitte zuerst Bilddateien auswählen.")
+
         else:
             gespeichert = 0
 
             for uploaded_file in uploaded_files:
-                eindeutiger_name, public_url, thumbnail_url = bild_nach_supabase(uploaded_file)
+                (
+                    eindeutiger_name,
+                    public_url,
+                    thumbnail_url,
+                ) = bild_nach_supabase(uploaded_file)
 
                 daten = {
                     "dateiname": eindeutiger_name,
                     "kuenstler": kuenstler_neu,
-                    "titel": titel_neu if titel_neu else Path(uploaded_file.name).stem,
+                    "titel": titel_neu if titel_neu else uploaded_file.name,
                     "jahr": jahr_neu,
                     "technik": technik_neu,
                     "masse": masse_neu,
@@ -480,12 +201,15 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
                 gespeichert += 1
 
             st.success(f"{gespeichert} Bilder gespeichert.")
+
             st.session_state["seite"] = "Archiv durchsuchen"
             st.session_state["ansicht"] = "Galerieansicht"
+
             st.rerun()
 
 
 else:
+
     df = daten_laden()
 
     st.sidebar.header("Filter")
@@ -496,19 +220,37 @@ else:
         df["kuenstler"].astype(str).unique().tolist()
     )
 
-    kuenstler_filter = st.sidebar.selectbox("Künstler", kuenstler_liste)
+    kuenstler_filter = st.sidebar.selectbox(
+        "Künstler",
+        kuenstler_liste,
+    )
 
-    stil_filter = st.sidebar.multiselect("Stil / Epoche", STIL_OPTIONEN)
-    technik_filter = st.sidebar.multiselect("Techniken", TECHNIK_OPTIONEN)
-    gattung_filter = st.sidebar.multiselect("Gattung / Motiv", GATTUNG_OPTIONEN)
+    stil_filter = st.sidebar.multiselect(
+        "Stil / Epoche",
+        STIL_OPTIONEN,
+    )
+
+    technik_filter = st.sidebar.multiselect(
+        "Techniken",
+        TECHNIK_OPTIONEN,
+    )
+
+    gattung_filter = st.sidebar.multiselect(
+        "Gattung / Motiv",
+        GATTUNG_OPTIONEN,
+    )
 
     gefiltert = df.copy()
 
     if suchbegriff:
         suchbegriff = suchbegriff.lower()
+
         gefiltert = gefiltert[
             gefiltert.astype(str)
-            .apply(lambda row: row.str.lower().str.contains(suchbegriff).any(), axis=1)
+            .apply(
+                lambda row: row.str.lower().str.contains(suchbegriff).any(),
+                axis=1,
+            )
         ]
 
     if kuenstler_filter != "Alle":
@@ -565,7 +307,10 @@ else:
 
     ansicht = st.radio(
         "Ansicht",
-        ["Galerieansicht", "Detailansicht"],
+        [
+            "Galerieansicht",
+            "Detailansicht"
+        ],
         horizontal=True,
         index=0 if st.session_state["ansicht"] == "Galerieansicht" else 1,
     )
@@ -573,6 +318,7 @@ else:
     st.session_state["ansicht"] = ansicht
 
     if ansicht == "Galerieansicht":
+
         for start in range(0, len(gefiltert), 3):
             spalten = st.columns(3)
 
@@ -582,22 +328,34 @@ else:
 
                 row = gefiltert.iloc[start + i]
 
-                bild_url = row["thumbnailpfad"] if row["thumbnailpfad"] else row["bildpfad"]
+                bild_url = (
+                    row["thumbnailpfad"]
+                    if row["thumbnailpfad"]
+                    else row["bildpfad"]
+                )
 
                 with spalten[i]:
+
                     with st.container(border=True):
+
                         st.markdown(
                             bild_html(bild_url),
                             unsafe_allow_html=True,
                         )
 
-                        if st.button("Groß anzeigen", key=f"gross_{row['id']}"):
+                        if st.button(
+                            "Groß anzeigen",
+                            key=f"gross_{row['id']}",
+                        ):
                             st.session_state["ausgewaehlte_id"] = int(row["id"])
                             st.session_state["ansicht"] = "Detailansicht"
                             st.rerun()
 
                         try:
-                            bild_download = requests.get(row["bildpfad"], timeout=20).content
+                            bild_download = requests.get(
+                                row["bildpfad"],
+                                timeout=20,
+                            ).content
 
                             st.download_button(
                                 label="Bild herunterladen",
@@ -606,6 +364,7 @@ else:
                                 mime="application/octet-stream",
                                 key=f"download_{row['id']}",
                             )
+
                         except Exception:
                             st.info("Download aktuell nicht verfügbar.")
 
@@ -643,8 +402,10 @@ else:
                         )
 
     else:
+
         if len(gefiltert) == 0:
             st.info("Keine Einträge gefunden.")
+
         else:
             auswahl_liste = [
                 f"{row.get('kuenstler', '')} – {row.get('titel', '')} [{row.get('id', '')}]"
@@ -659,7 +420,12 @@ else:
                         vorauswahl_index = idx
                         break
 
-            auswahl = st.selectbox("Werk auswählen", auswahl_liste, index=vorauswahl_index)
+            auswahl = st.selectbox(
+                "Werk auswählen",
+                auswahl_liste,
+                index=vorauswahl_index,
+            )
+
             index = auswahl_liste.index(auswahl)
             row = gefiltert.iloc[index]
 
@@ -670,10 +436,16 @@ else:
             col1, col2 = st.columns([1.4, 1])
 
             with col1:
-                st.image(row["bildpfad"], use_container_width=True)
+                st.image(
+                    row["bildpfad"],
+                    use_container_width=True,
+                )
 
                 try:
-                    bild_download = requests.get(row["bildpfad"], timeout=20).content
+                    bild_download = requests.get(
+                        row["bildpfad"],
+                        timeout=20,
+                    ).content
 
                     st.download_button(
                         label="Bild herunterladen",
@@ -682,6 +454,7 @@ else:
                         mime="application/octet-stream",
                         key=f"detail_download_{row['id']}",
                     )
+
                 except Exception:
                     st.info("Download aktuell nicht verfügbar.")
 
@@ -703,14 +476,42 @@ else:
                 st.divider()
 
                 with st.expander("Datensatz bearbeiten"):
+
                     with st.form(key=f"bearbeiten_form_{row['id']}"):
-                        bearb_kuenstler = st.text_input("Künstler", value=str(row.get("kuenstler", "")))
-                        bearb_titel = st.text_input("Titel", value=str(row.get("titel", "")))
-                        bearb_jahr = st.text_input("Jahr", value=str(row.get("jahr", "")))
-                        bearb_technik = st.text_input("Technik", value=str(row.get("technik", "")))
-                        bearb_masse = st.text_input("Maße", value=str(row.get("masse", "")))
-                        bearb_standort = st.text_input("Standort", value=str(row.get("standort", "")))
-                        bearb_rechte = st.text_input("Rechte", value=str(row.get("rechte", "")))
+                        bearb_kuenstler = st.text_input(
+                            "Künstler",
+                            value=str(row.get("kuenstler", "")),
+                        )
+
+                        bearb_titel = st.text_input(
+                            "Titel",
+                            value=str(row.get("titel", "")),
+                        )
+
+                        bearb_jahr = st.text_input(
+                            "Jahr",
+                            value=str(row.get("jahr", "")),
+                        )
+
+                        bearb_technik = st.text_input(
+                            "Technik",
+                            value=str(row.get("technik", "")),
+                        )
+
+                        bearb_masse = st.text_input(
+                            "Maße",
+                            value=str(row.get("masse", "")),
+                        )
+
+                        bearb_standort = st.text_input(
+                            "Standort",
+                            value=str(row.get("standort", "")),
+                        )
+
+                        bearb_rechte = st.text_input(
+                            "Rechte",
+                            value=str(row.get("rechte", "")),
+                        )
 
                         bearb_stile = st.multiselect(
                             "Stil / Epoche",
@@ -730,10 +531,19 @@ else:
                             default=text_zu_liste(row.get("gattungen", "")),
                         )
 
-                        bearb_beschreibung = st.text_area("Beschreibung", value=str(row.get("beschreibung", "")))
-                        bearb_schlagworte = st.text_input("Schlagworte", value=str(row.get("schlagworte", "")))
+                        bearb_beschreibung = st.text_area(
+                            "Beschreibung",
+                            value=str(row.get("beschreibung", "")),
+                        )
 
-                        speichern = st.form_submit_button("Änderungen speichern")
+                        bearb_schlagworte = st.text_input(
+                            "Schlagworte",
+                            value=str(row.get("schlagworte", "")),
+                        )
+
+                        speichern = st.form_submit_button(
+                            "Änderungen speichern"
+                        )
 
                     if speichern:
                         neue_daten = {
@@ -751,7 +561,11 @@ else:
                             "gattungen": liste_zu_text(bearb_gattungen),
                         }
 
-                        datensatz_aktualisieren(row["id"], neue_daten)
+                        datensatz_aktualisieren(
+                            row["id"],
+                            neue_daten,
+                        )
+
                         st.success("Änderungen wurden gespeichert.")
                         st.rerun()
 
