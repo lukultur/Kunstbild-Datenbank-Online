@@ -302,7 +302,7 @@ else:
 
     df = daten_laden()
 
-    st.sidebar.header("Filter")
+       st.sidebar.header("Filter")
 
     suchbegriff = st.sidebar.text_input("Freie Suche")
 
@@ -310,7 +310,7 @@ else:
         df["kuenstler"].astype(str).unique().tolist()
     )
 
-        kuenstler_filter = st.sidebar.selectbox(
+    kuenstler_filter = st.sidebar.selectbox(
         "Künstler",
         kuenstler_liste,
     )
@@ -343,7 +343,7 @@ else:
             )
         ]
 
-        if kuenstler_filter != "Alle":
+    if kuenstler_filter != "Alle":
         gefiltert = gefiltert[
             gefiltert["kuenstler"].astype(str)
             == kuenstler_filter
