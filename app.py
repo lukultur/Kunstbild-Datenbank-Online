@@ -127,6 +127,10 @@ with st.sidebar:
         st.rerun()
 
 
+# =========================================================
+# UPLOAD
+# =========================================================
+
 if st.session_state["seite"] == "Neues Bild hinzufügen":
 
     st.header("Neue Bilder hinzufügen")
@@ -303,6 +307,10 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
             st.rerun()
 
 
+# =========================================================
+# ARCHIV
+# =========================================================
+
 else:
 
     df = daten_laden()
@@ -318,21 +326,6 @@ else:
     kuenstler_filter = st.sidebar.selectbox(
         "Künstler",
         kuenstler_liste,
-    )
-
-    stil_filter = st.sidebar.multiselect(
-        "Stil / Epoche",
-        STIL_OPTIONEN,
-    )
-
-    technik_filter = st.sidebar.multiselect(
-        "Techniken",
-        TECHNIK_OPTIONEN,
-    )
-
-    gattung_filter = st.sidebar.multiselect(
-        "Gattung / Motiv",
-        GATTUNG_OPTIONEN,
     )
 
     gefiltert = df.copy()
@@ -397,6 +390,10 @@ else:
         horizontal=True,
     )
 
+    # =====================================================
+    # GALERIE
+    # =====================================================
+
     if ansicht == "Galerieansicht":
 
         for start in range(0, len(gefiltert), 3):
@@ -425,21 +422,83 @@ else:
                             unsafe_allow_html=True,
                         )
 
+                        if st.button(
+                            "Groß anzeigen",
+                            key=f"gross_{row['id']}",
+                        ):
+
+                            st.session_state["ausgewaehlte_id"] = int(row["id"])
+                            st.session_state["ansicht"] = "Detailansicht"
+
+                            st.rerun()
+
+                        try:
+
+                            bild_download = requests.get(
+                                row["bildpfad"],
+                                timeout=20,
+                            ).content
+
+                            st.download_button(
+                                label="Bild herunterladen",
+                                data=bild_download,
+                                file_name=str(row["dateiname"]),
+                                mime="application/octet-stream",
+                                key=f"download_{row['id']}",
+                            )
+
+                        except Exception:
+
+                            st.info(
+                                "Download aktuell nicht verfügbar."
+                            )
+
+                        with st.popover("🗑️ Löschen"):
+
+                            st.warning("Wirklich löschen?")
+
+                            if st.button(
+                                "Ja, endgültig löschen",
+                                key=f"confirm_delete_gallery_{row['id']}",
+                            ):
+
+                                datensatz_loeschen(
+                                    row["id"],
+                                    row["dateiname"],
+                                    row.get("thumbnailpfad", ""),
+                                )
+
+                                st.success("Datensatz wurde gelöscht.")
+
+                                st.rerun()
+
                         st.markdown(
-                            f"### {kurzer_titel(row.get('titel', ''))}"
+                            f'<div class="kunst-title">{kurzer_titel(row.get("titel", ""))}</div>',
+                            unsafe_allow_html=True,
                         )
 
-                        st.write(
-                            f"**{row.get('kuenstler', '')}**"
+                        st.markdown(
+                            f"""
+                            <div class="kunst-meta">
+                            <strong>{row.get("kuenstler", "") or "&nbsp;"}</strong><br>
+                            {row.get("jahr", "") or "&nbsp;"}<br>
+                            Stil: {row.get("stile", "") or "—"}<br>
+                            Gattung: {row.get("gattungen", "") or "—"}
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
                         )
 
-                        st.write(
-                            row.get("jahr", "")
-                        )
+    # =====================================================
+    # DETAIL
+    # =====================================================
 
     else:
 
-        if len(gefiltert) > 0:
+        if len(gefiltert) == 0:
+            st.info("Keine Einträge gefunden.")
+
+        else:
 
             auswahl_liste = [
                 f"{row.get('kuenstler', '')} – {row.get('titel', '')}"
@@ -464,6 +523,25 @@ else:
                     use_container_width=True,
                 )
 
+                try:
+
+                    bild_download = requests.get(
+                        row["bildpfad"],
+                        timeout=20,
+                    ).content
+
+                    st.download_button(
+                        label="Bild herunterladen",
+                        data=bild_download,
+                        file_name=str(row["dateiname"]),
+                        mime="application/octet-stream",
+                        key=f"detail_download_{row['id']}",
+                    )
+
+                except Exception:
+
+                    st.info("Download aktuell nicht verfügbar.")
+
             with col2:
 
                 st.header(
@@ -473,35 +551,64 @@ else:
                 st.write(f"**Künstler:** {row.get('kuenstler', '')}")
                 st.write(f"**Jahr:** {row.get('jahr', '')}")
                 st.write(f"**Technik:** {row.get('technik', '')}")
+                st.write(f"**Maße:** {row.get('masse', '')}")
+                st.write(f"**Standort:** {row.get('standort', '')}")
+                st.write(f"**Rechte:** {row.get('rechte', '')}")
+                st.write(f"**Stil / Epoche:** {row.get('stile', '')}")
+                st.write(f"**Techniken:** {row.get('techniken', '')}")
+                st.write(f"**Gattung / Motiv:** {row.get('gattungen', '')}")
                 st.write(f"**Beschreibung:** {row.get('beschreibung', '')}")
+                st.write(f"**Schlagworte:** {row.get('schlagworte', '')}")
+
+                st.divider()
 
                 with st.expander("Datensatz bearbeiten"):
 
-                    with st.form(key=f"edit_{row['id']}"):
-
-                        bearb_titel = st.text_input(
-                            "Titel",
-                            value=row.get("titel", "")
-                        )
+                    with st.form(key=f"bearbeiten_form_{row['id']}"):
 
                         bearb_kuenstler = st.text_input(
                             "Künstler",
-                            value=row.get("kuenstler", "")
+                            value=str(row.get("kuenstler", "")),
+                        )
+
+                        bearb_titel = st.text_input(
+                            "Titel",
+                            value=str(row.get("titel", "")),
                         )
 
                         bearb_jahr = st.text_input(
                             "Jahr",
-                            value=row.get("jahr", "")
+                            value=str(row.get("jahr", "")),
                         )
 
                         bearb_technik = st.text_input(
                             "Technik",
-                            value=row.get("technik", "")
+                            value=str(row.get("technik", "")),
+                        )
+
+                        bearb_masse = st.text_input(
+                            "Maße",
+                            value=str(row.get("masse", "")),
+                        )
+
+                        bearb_standort = st.text_input(
+                            "Standort",
+                            value=str(row.get("standort", "")),
+                        )
+
+                        bearb_rechte = st.text_input(
+                            "Rechte",
+                            value=str(row.get("rechte", "")),
                         )
 
                         bearb_beschreibung = st.text_area(
                             "Beschreibung",
-                            value=row.get("beschreibung", "")
+                            value=str(row.get("beschreibung", "")),
+                        )
+
+                        bearb_schlagworte = st.text_input(
+                            "Schlagworte",
+                            value=str(row.get("schlagworte", "")),
                         )
 
                         speichern = st.form_submit_button(
@@ -511,11 +618,15 @@ else:
                     if speichern:
 
                         neue_daten = {
-                            "titel": bearb_titel,
                             "kuenstler": bearb_kuenstler,
+                            "titel": bearb_titel,
                             "jahr": bearb_jahr,
                             "technik": bearb_technik,
+                            "masse": bearb_masse,
+                            "standort": bearb_standort,
+                            "rechte": bearb_rechte,
                             "beschreibung": bearb_beschreibung,
+                            "schlagworte": bearb_schlagworte,
                         }
 
                         datensatz_aktualisieren(
@@ -523,8 +634,6 @@ else:
                             neue_daten,
                         )
 
-                        st.success(
-                            "Änderungen gespeichert."
-                        )
+                        st.success("Änderungen wurden gespeichert.")
 
                         st.rerun()
