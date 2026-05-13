@@ -62,6 +62,7 @@ def kurzer_titel(text, max_laenge=32):
 
 def login_pruefen():
     st.title("Kunstbild-Datenbank")
+
     st.subheader("Geschützter Zugang")
 
     eingabe = st.text_input(
@@ -99,10 +100,14 @@ if not st.session_state["eingeloggt"]:
 
 
 st.title("Kunstbild-Datenbank")
-st.caption("Recherche, Vorschau, Upload, Export und Verwaltung deiner Kunstbilder")
+
+st.caption(
+    "Recherche, Vorschau, Upload, Export und Verwaltung deiner Kunstbilder"
+)
 
 
 with st.sidebar:
+
     st.header("Navigation")
 
     seite = st.radio(
@@ -164,13 +169,9 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
         GATTUNG_OPTIONEN,
     )
 
-    technik_neu = st.text_input("Technik")
-    masse_neu = st.text_input("Maße")
-    standort_neu = st.text_input("Standort")
-    rechte_neu = st.text_input("Rechte")
-
-    beschreibung_neu = st.text_area("Beschreibung")
-    schlagworte_neu = st.text_input("Schlagworte")
+    technik_neu = ""
+    beschreibung_neu = ""
+    schlagworte_neu = ""
 
     if uploaded_files:
 
@@ -198,28 +199,30 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
 
         if analyse:
 
-            if not technik_neu:
-                technik_neu = analyse.get("technik", "")
+            technik_neu = analyse.get("technik", "")
+            beschreibung_neu = analyse.get("beschreibung", "")
+            schlagworte_neu = analyse.get("schlagworte", "")
 
-            if not beschreibung_neu:
-                beschreibung_neu = analyse.get("beschreibung", "")
+            stile_neu = text_zu_liste(
+                analyse.get("stile", "")
+            )
 
-            if not schlagworte_neu:
-                schlagworte_neu = analyse.get("schlagworte", "")
+            techniken_neu = text_zu_liste(
+                analyse.get("techniken", "")
+            )
 
-            if not stile_neu:
-                stile_neu = text_zu_liste(analyse.get("stile", ""))
-
-            if not techniken_neu:
-                techniken_neu = text_zu_liste(analyse.get("techniken", ""))
-
-            if not gattungen_neu:
-                gattungen_neu = text_zu_liste(analyse.get("gattungen", ""))
+            gattungen_neu = text_zu_liste(
+                analyse.get("gattungen", "")
+            )
 
     technik_neu = st.text_input(
         "Technik",
         value=technik_neu,
     )
+
+    masse_neu = st.text_input("Maße")
+    standort_neu = st.text_input("Standort")
+    rechte_neu = st.text_input("Rechte")
 
     beschreibung_neu = st.text_area(
         "Beschreibung",
@@ -232,14 +235,25 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
     )
 
     if uploaded_files:
-        st.write(f"{len(uploaded_files)} Bilddatei(en) ausgewählt")
+
+        st.write(
+            f"{len(uploaded_files)} Bilddatei(en) ausgewählt"
+        )
 
         vorschau_spalten = st.columns(4)
 
         for index, datei in enumerate(uploaded_files):
+
             with vorschau_spalten[index % 4]:
-                st.image(datei, width=150)
-                st.caption(datei.name)
+
+                st.image(
+                    datei,
+                    width=150
+                )
+
+                st.caption(
+                    datei.name
+                )
 
     if st.button("Bilder und Datensätze speichern"):
 
@@ -247,6 +261,7 @@ if st.session_state["seite"] == "Neues Bild hinzufügen":
             st.error("Bitte zuerst Bilddateien auswählen.")
 
         else:
+
             gespeichert = 0
 
             for uploaded_file in uploaded_files:
@@ -324,6 +339,7 @@ else:
     gefiltert = df.copy()
 
     if suchbegriff:
+
         suchbegriff = suchbegriff.lower()
 
         gefiltert = gefiltert[
@@ -335,28 +351,45 @@ else:
         ]
 
     if kuenstler_filter != "Alle":
+
         gefiltert = gefiltert[
-            gefiltert["kuenstler"].astype(str) == kuenstler_filter
+            gefiltert["kuenstler"].astype(str)
+            == kuenstler_filter
         ]
 
     if stil_filter:
+
         gefiltert = gefiltert[
             gefiltert["stile"].astype(str).apply(
-                lambda text: any(wert in text for wert in stil_filter)
+                lambda text:
+                any(
+                    wert in text
+                    for wert in stil_filter
+                )
             )
         ]
 
     if technik_filter:
+
         gefiltert = gefiltert[
             gefiltert["techniken"].astype(str).apply(
-                lambda text: any(wert in text for wert in technik_filter)
+                lambda text:
+                any(
+                    wert in text
+                    for wert in technik_filter
+                )
             )
         ]
 
     if gattung_filter:
+
         gefiltert = gefiltert[
             gefiltert["gattungen"].astype(str).apply(
-                lambda text: any(wert in text for wert in gattung_filter)
+                lambda text:
+                any(
+                    wert in text
+                    for wert in gattung_filter
+                )
             )
         ]
 
@@ -388,6 +421,184 @@ else:
             mime="application/pdf",
         )
 
-    st.success(
-        "Projekt erfolgreich modularisiert."
+    ansicht = st.radio(
+        "Ansicht",
+        [
+            "Galerieansicht",
+            "Detailansicht"
+        ],
+        horizontal=True,
+        index=0 if st.session_state["ansicht"] == "Galerieansicht" else 1,
     )
+
+    st.session_state["ansicht"] = ansicht
+
+    if ansicht == "Galerieansicht":
+
+        for start in range(0, len(gefiltert), 3):
+
+            spalten = st.columns(3)
+
+            for i in range(3):
+
+                if start + i >= len(gefiltert):
+                    continue
+
+                row = gefiltert.iloc[start + i]
+
+                bild_url = (
+                    row["thumbnailpfad"]
+                    if row["thumbnailpfad"]
+                    else row["bildpfad"]
+                )
+
+                with spalten[i]:
+
+                    with st.container(border=True):
+
+                        st.markdown(
+                            bild_html(bild_url),
+                            unsafe_allow_html=True,
+                        )
+
+                        if st.button(
+                            "Groß anzeigen",
+                            key=f"gross_{row['id']}",
+                        ):
+
+                            st.session_state["ausgewaehlte_id"] = int(row["id"])
+                            st.session_state["ansicht"] = "Detailansicht"
+
+                            st.rerun()
+
+                        try:
+
+                            bild_download = requests.get(
+                                row["bildpfad"],
+                                timeout=20,
+                            ).content
+
+                            st.download_button(
+                                label="Bild herunterladen",
+                                data=bild_download,
+                                file_name=str(row["dateiname"]),
+                                mime="application/octet-stream",
+                                key=f"download_{row['id']}",
+                            )
+
+                        except Exception:
+
+                            st.info(
+                                "Download aktuell nicht verfügbar."
+                            )
+
+                        with st.popover("🗑️ Löschen"):
+
+                            st.warning("Wirklich löschen?")
+
+                            if st.button(
+                                "Ja, endgültig löschen",
+                                key=f"confirm_delete_gallery_{row['id']}",
+                            ):
+
+                                datensatz_loeschen(
+                                    row["id"],
+                                    row["dateiname"],
+                                    row.get("thumbnailpfad", ""),
+                                )
+
+                                st.success("Datensatz wurde gelöscht.")
+
+                                st.rerun()
+
+                        st.markdown(
+                            f'<div class="kunst-title">{kurzer_titel(row.get("titel", ""))}</div>',
+                            unsafe_allow_html=True,
+                        )
+
+                        st.markdown(
+                            f"""
+                            <div class="kunst-meta">
+                            <strong>{row.get("kuenstler", "") or "&nbsp;"}</strong><br>
+                            {row.get("jahr", "") or "&nbsp;"}<br>
+                            Stil: {row.get("stile", "") or "—"}<br>
+                            Gattung: {row.get("gattungen", "") or "—"}
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+
+    else:
+
+        if len(gefiltert) == 0:
+
+            st.info("Keine Einträge gefunden.")
+
+        else:
+
+            auswahl_liste = [
+
+                f"{row.get('kuenstler', '')} – "
+                f"{row.get('titel', '')} "
+                f"[{row.get('id', '')}]"
+
+                for _, row
+                in gefiltert.iterrows()
+            ]
+
+            vorauswahl_index = 0
+
+            if st.session_state["ausgewaehlte_id"] is not None:
+
+                for idx, row_check in gefiltert.iterrows():
+
+                    if int(row_check["id"]) == int(
+                        st.session_state["ausgewaehlte_id"]
+                    ):
+
+                        vorauswahl_index = idx
+
+                        break
+
+            auswahl = st.selectbox(
+                "Werk auswählen",
+                auswahl_liste,
+                index=vorauswahl_index,
+            )
+
+            index = auswahl_liste.index(auswahl)
+
+            row = gefiltert.iloc[index]
+
+            if st.button("Zurück zur Galerie"):
+
+                st.session_state["ansicht"] = "Galerieansicht"
+
+                st.rerun()
+
+            col1, col2 = st.columns([1.4, 1])
+
+            with col1:
+
+                st.image(
+                    row["bildpfad"],
+                    use_container_width=True,
+                )
+
+            with col2:
+
+                st.header(
+                    str(row.get("titel", ""))
+                )
+
+                st.write(f"**Künstler:** {row.get('kuenstler', '')}")
+                st.write(f"**Jahr:** {row.get('jahr', '')}")
+                st.write(f"**Technik:** {row.get('technik', '')}")
+                st.write(f"**Maße:** {row.get('masse', '')}")
+                st.write(f"**Standort:** {row.get('standort', '')}")
+                st.write(f"**Rechte:** {row.get('rechte', '')}")
+                st.write(f"**Stil / Epoche:** {row.get('stile', '')}")
+                st.write(f"**Techniken:** {row.get('techniken', '')}")
+                st.write(f"**Gattung / Motiv:** {row.get('gattungen', '')}")
+                st.write(f"**Beschreibung:** {row.get('beschreibung', '')}")
+                st.write(f"**Schlagworte:** {row.get('schlagworte', '')}")
