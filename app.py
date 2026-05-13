@@ -6,7 +6,7 @@ import uuid
 import requests
 from pathlib import Path
 from io import BytesIO
-from PIL import Image, ImageOps
+from PIL import Image
 from openai import OpenAI
 from supabase import create_client
 
@@ -142,30 +142,6 @@ def datensatz_loeschen(datensatz_id, dateiname):
         pass
 
     supabase.table("kunstbilder").delete().eq("id", datensatz_id).execute()
-
-
-def bild_laden_url(url):
-    response = requests.get(url, timeout=20)
-    bild = Image.open(BytesIO(response.content))
-    bild = ImageOps.exif_transpose(bild)
-    return bild
-
-
-def vorschaubild_erzeugen(bild, ziel_breite=260, ziel_hoehe=260):
-    bild = bild.copy()
-    bild.thumbnail((ziel_breite, ziel_hoehe))
-
-    hintergrund = Image.new("RGB", (ziel_breite, ziel_hoehe), "white")
-
-    x = (ziel_breite - bild.width) // 2
-    y = (ziel_hoehe - bild.height) // 2
-
-    if bild.mode in ("RGBA", "LA"):
-        hintergrund.paste(bild, (x, y), bild)
-    else:
-        hintergrund.paste(bild, (x, y))
-
-    return hintergrund
 
 
 def kurzer_titel(text, max_laenge=18):
@@ -408,12 +384,10 @@ else:
 
                 with spalten[i]:
                     with st.container(border=True):
-                        try:
-                            bild = bild_laden_url(bild_url)
-                            vorschau = vorschaubild_erzeugen(bild)
-                            st.image(vorschau, width=260)
-                        except Exception:
-                            st.warning("Bild konnte nicht geladen werden.")
+                        st.image(
+                            bild_url,
+                            width=260,
+                        )
 
                         if st.button("Groß anzeigen", key=f"gross_{row['id']}"):
                             st.session_state["ausgewaehlte_id"] = int(row["id"])
