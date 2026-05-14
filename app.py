@@ -448,10 +448,11 @@ else:
 
     if ansicht == "Galerieansicht":
 
-        st.markdown(
-            galerie_grid_html(gefiltert),
-            unsafe_allow_html=True,
-        )
+        st.components.v1.html(
+    galerie_grid_html(gefiltert),
+    height=1400,
+    scrolling=True,
+)
 
     else:
 
