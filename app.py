@@ -346,75 +346,72 @@ else:
                             unsafe_allow_html=True,
                         )
 
-                        aktion1, aktion2, aktion3, aktion4 = st.columns(
-                            [1, 1, 1, 1],
+                        aktion1, aktion2 = st.columns(
+                            [1, 1],
                             gap="small",
                         )
 
-                        with aktion1:
+                                                with aktion1:
+
                             if st.button(
                                 "⛶",
                                 key=f"gross_{row['id']}",
-                                help="Groß anzeigen",
+                                help="Detailansicht öffnen",
                                 use_container_width=True,
                             ):
+
                                 st.session_state["ausgewaehlte_id"] = int(row["id"])
                                 st.session_state["ansicht"] = "Detailansicht"
                                 st.rerun()
 
                         with aktion2:
-                            try:
-                                bild_download = requests.get(
-                                    row["bildpfad"],
-                                    timeout=20,
-                                ).content
 
-                                st.download_button(
-                                    label="⬇",
-                                    data=bild_download,
-                                    file_name=str(row["dateiname"]),
-                                    mime="application/octet-stream",
-                                    key=f"download_{row['id']}",
-                                    help="Bild herunterladen",
-                                    use_container_width=True,
-                                )
+                            with st.popover(
+                                "⋯",
+                                use_container_width=True,
+                            ):
 
-                            except Exception:
-                                st.button(
-                                    "⬇",
-                                    disabled=True,
-                                    key=f"download_disabled_{row['id']}",
-                                    help="Download aktuell nicht verfügbar",
-                                    use_container_width=True,
-                                )
+                                try:
 
-                        with aktion3:
-                            with st.popover("🗑"):
-                                st.warning("Wirklich löschen?")
+                                    bild_download = requests.get(
+                                        row["bildpfad"],
+                                        timeout=20,
+                                    ).content
+
+                                    st.download_button(
+                                        label="⬇ Bild herunterladen",
+                                        data=bild_download,
+                                        file_name=str(row["dateiname"]),
+                                        mime="application/octet-stream",
+                                        key=f"download_{row['id']}",
+                                        use_container_width=True,
+                                    )
+
+                                except Exception:
+
+                                    st.info(
+                                        "Download aktuell nicht verfügbar."
+                                    )
+
+                                st.divider()
 
                                 if st.button(
-                                    "Endgültig löschen",
+                                    "🗑 Datensatz löschen",
                                     key=f"confirm_delete_gallery_{row['id']}",
+                                    use_container_width=True,
                                 ):
+
                                     datensatz_loeschen(
                                         row["id"],
                                         row["dateiname"],
                                         row.get("thumbnailpfad", ""),
                                     )
 
-                                    st.success("Datensatz wurde gelöscht.")
-                                    st.rerun()
+                                    st.success(
+                                        "Datensatz wurde gelöscht."
+                                    )
 
-                        with aktion4:
-                            if st.button(
-                                "⋯",
-                                key=f"details_{row['id']}",
-                                help="Details öffnen",
-                                use_container_width=True,
-                            ):
-                                st.session_state["ausgewaehlte_id"] = int(row["id"])
-                                st.session_state["ansicht"] = "Detailansicht"
-                                st.rerun()
+                                    st.rerun()
 
     else:
 
