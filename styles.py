@@ -8,50 +8,88 @@ def lade_css():
         <style>
 
         .stApp {
-            background-color: #f5f5f5;
+            background-color: #0e1117;
+            color: #f5f5f5;
         }
 
-        .kunst-title {
-            font-size: 1.05rem;
-            font-weight: 700;
-            margin-top: 0.5rem;
-            margin-bottom: 0.3rem;
-            line-height: 1.2;
-            min-height: 2.5rem;
+        section[data-testid="stSidebar"] {
+            background-color: #262730;
         }
 
-        .kunst-meta {
-            font-size: 0.88rem;
-            color: #444;
-            line-height: 1.45;
-            min-height: 5rem;
+        h1, h2, h3, h4, h5, h6,
+        p, label, span, div {
+            color: #f5f5f5;
         }
 
         .fixed-image-box {
             width: 100%;
-            aspect-ratio: 1 / 1;
-            overflow: hidden;
-            border-radius: 10px;
-            background: #ddd;
+            height: 260px;
             display: flex;
             align-items: center;
             justify-content: center;
+            background: #141820;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 0.75rem;
         }
 
         .fixed-image-box img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .kunst-title {
+            height: 3.1em;
+            overflow: hidden;
+            font-size: 1.1rem;
+            font-weight: 700;
+            line-height: 1.25;
+            margin-top: 0.6rem;
+            margin-bottom: 0.4rem;
+            color: #ffffff;
+        }
+
+        .kunst-meta {
+            min-height: 5.2em;
+            font-size: 0.92rem;
+            line-height: 1.45;
+            color: #e6e6e6;
+        }
+
+        .stButton > button,
+        .stDownloadButton > button {
             width: 100%;
-            height: 100%;
-            object-fit: cover;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        div[data-testid="stVerticalBlockBorderWrapper"] {
+            background-color: #111827;
+            border: 1px solid #374151;
+            border-radius: 12px;
+            padding: 0.8rem;
         }
 
         @media (max-width: 768px) {
 
+            .block-container {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+
+            .fixed-image-box {
+                height: 220px;
+            }
+
             .kunst-title {
-                font-size: 0.95rem;
+                font-size: 1rem;
+                height: auto;
             }
 
             .kunst-meta {
-                font-size: 0.8rem;
+                font-size: 0.85rem;
+                min-height: auto;
             }
 
         }
