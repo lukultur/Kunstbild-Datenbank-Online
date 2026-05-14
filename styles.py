@@ -13,10 +13,10 @@ def lade_css():
         }
 
         .block-container {
-            max-width: 1180px;
-            padding-top: 3rem;
-            padding-left: 2rem;
-            padding-right: 2rem;
+            max-width: 1160px;
+            padding-top: 2.4rem;
+            padding-left: 1.8rem;
+            padding-right: 1.8rem;
         }
 
         section[data-testid="stSidebar"] {
@@ -24,8 +24,9 @@ def lade_css():
         }
 
         h1 {
-            font-size: 2.4rem;
+            font-size: 2.25rem;
             letter-spacing: -0.03em;
+            margin-bottom: 0.3rem;
         }
 
         h2, h3, h4, h5, h6,
@@ -35,14 +36,14 @@ def lade_css():
 
         .fixed-image-box {
             width: 100%;
-            height: 210px;
+            height: 220px;
             display: flex;
             align-items: center;
             justify-content: center;
             background: #141820;
-            border-radius: 12px;
+            border-radius: 13px;
             overflow: hidden;
-            margin-bottom: 0.7rem;
+            margin-bottom: 0.65rem;
         }
 
         .fixed-image-box img {
@@ -52,61 +53,63 @@ def lade_css():
         }
 
         .kunst-title {
-            height: 2.8em;
+            height: 2.5em;
             overflow: hidden;
-            font-size: 1.02rem;
+            font-size: 0.98rem;
             font-weight: 700;
             line-height: 1.25;
-            margin-top: 0.5rem;
+            margin-top: 0.45rem;
             margin-bottom: 0.35rem;
             color: #ffffff;
         }
 
-        .kunst-meta {
-            min-height: 4.7em;
-            font-size: 0.86rem;
-            line-height: 1.4;
-            color: #e6e6e6;
-        }
-	.kunst-meta-kompakt {
-            min-height: 2.6em;
-            font-size: 0.86rem;
+        .kunst-meta-kompakt {
+            min-height: 2.3em;
+            font-size: 0.82rem;
             line-height: 1.35;
             color: #d1d5db;
-            margin-bottom: 0.65rem;
+            margin-bottom: 0.45rem;
+        }
+
+        .kunst-meta {
+            min-height: 4.3em;
+            font-size: 0.84rem;
+            line-height: 1.4;
+            color: #e6e6e6;
         }
 
         .stButton > button,
         .stDownloadButton > button {
-            width: 100%;
             border-radius: 8px;
             font-weight: 600;
-            padding-top: 0.45rem;
-            padding-bottom: 0.45rem;
+            padding-top: 0.32rem;
+            padding-bottom: 0.32rem;
+            min-height: 2.25rem;
         }
 
         div[data-testid="stVerticalBlockBorderWrapper"] {
             background-color: #111827;
             border: 1px solid #374151;
             border-radius: 14px;
-            padding: 0.75rem;
+            padding: 0.65rem;
         }
 
         div[data-testid="column"] {
-            padding-left: 0.45rem;
-            padding-right: 0.45rem;
+            padding-left: 0.38rem;
+            padding-right: 0.38rem;
         }
 
         input, textarea, select {
             border-radius: 8px !important;
         }
 
+        /* Tablet */
         @media (max-width: 900px) {
 
             .block-container {
                 padding-left: 1rem;
                 padding-right: 1rem;
-                padding-top: 2rem;
+                padding-top: 1.8rem;
             }
 
             h1 {
@@ -114,57 +117,61 @@ def lade_css():
             }
 
             .fixed-image-box {
-                height: 210px;
+                height: 230px;
             }
 
             .kunst-title {
-                font-size: 0.98rem;
+                font-size: 0.96rem;
                 height: auto;
             }
 
-            .kunst-meta {
+            .kunst-meta-kompakt {
                 font-size: 0.82rem;
                 min-height: auto;
             }
 
         }
 
+        /* Smartphone */
         @media (max-width: 640px) {
 
             .block-container {
                 padding-left: 0.75rem;
                 padding-right: 0.75rem;
-                padding-top: 1.25rem;
+                padding-top: 1rem;
             }
 
             h1 {
-                font-size: 1.65rem;
+                font-size: 1.55rem;
                 line-height: 1.15;
             }
 
             .fixed-image-box {
-                height: 260px;
+                height: 280px;
+                border-radius: 12px;
             }
 
             div[data-testid="stVerticalBlockBorderWrapper"] {
-                padding: 0.7rem;
+                padding: 0.65rem;
                 margin-bottom: 1rem;
-            }
-
-            .stButton > button,
-            .stDownloadButton > button {
-                font-size: 0.9rem;
-                padding-top: 0.5rem;
-                padding-bottom: 0.5rem;
+                border-radius: 13px;
             }
 
             .kunst-title {
                 font-size: 1rem;
-                margin-top: 0.55rem;
+                height: auto;
+                margin-top: 0.6rem;
             }
 
-            .kunst-meta {
-                font-size: 0.84rem;
+            .kunst-meta-kompakt {
+                font-size: 0.86rem;
+                margin-bottom: 0.6rem;
+            }
+
+            .stButton > button,
+            .stDownloadButton > button {
+                min-height: 2.6rem;
+                font-size: 1rem;
             }
 
         }
