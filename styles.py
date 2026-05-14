@@ -12,25 +12,37 @@ def lade_css():
             color: #f5f5f5;
         }
 
+        .block-container {
+            max-width: 1180px;
+            padding-top: 3rem;
+            padding-left: 2rem;
+            padding-right: 2rem;
+        }
+
         section[data-testid="stSidebar"] {
             background-color: #262730;
         }
 
-        h1, h2, h3, h4, h5, h6,
+        h1 {
+            font-size: 2.4rem;
+            letter-spacing: -0.03em;
+        }
+
+        h2, h3, h4, h5, h6,
         p, label, span, div {
             color: #f5f5f5;
         }
 
         .fixed-image-box {
             width: 100%;
-            height: 260px;
+            height: 230px;
             display: flex;
             align-items: center;
             justify-content: center;
             background: #141820;
-            border-radius: 10px;
+            border-radius: 12px;
             overflow: hidden;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.7rem;
         }
 
         .fixed-image-box img {
@@ -40,20 +52,20 @@ def lade_css():
         }
 
         .kunst-title {
-            height: 3.1em;
+            height: 2.8em;
             overflow: hidden;
-            font-size: 1.1rem;
+            font-size: 1.02rem;
             font-weight: 700;
             line-height: 1.25;
-            margin-top: 0.6rem;
-            margin-bottom: 0.4rem;
+            margin-top: 0.5rem;
+            margin-bottom: 0.35rem;
             color: #ffffff;
         }
 
         .kunst-meta {
-            min-height: 5.2em;
-            font-size: 0.92rem;
-            line-height: 1.45;
+            min-height: 4.7em;
+            font-size: 0.86rem;
+            line-height: 1.4;
             color: #e6e6e6;
         }
 
@@ -62,34 +74,90 @@ def lade_css():
             width: 100%;
             border-radius: 8px;
             font-weight: 600;
+            padding-top: 0.45rem;
+            padding-bottom: 0.45rem;
         }
 
         div[data-testid="stVerticalBlockBorderWrapper"] {
             background-color: #111827;
             border: 1px solid #374151;
-            border-radius: 12px;
-            padding: 0.8rem;
+            border-radius: 14px;
+            padding: 0.75rem;
         }
 
-        @media (max-width: 768px) {
+        div[data-testid="column"] {
+            padding-left: 0.45rem;
+            padding-right: 0.45rem;
+        }
+
+        input, textarea, select {
+            border-radius: 8px !important;
+        }
+
+        @media (max-width: 900px) {
 
             .block-container {
                 padding-left: 1rem;
                 padding-right: 1rem;
+                padding-top: 2rem;
+            }
+
+            h1 {
+                font-size: 1.9rem;
             }
 
             .fixed-image-box {
-                height: 220px;
+                height: 210px;
             }
 
             .kunst-title {
-                font-size: 1rem;
+                font-size: 0.98rem;
                 height: auto;
             }
 
             .kunst-meta {
-                font-size: 0.85rem;
+                font-size: 0.82rem;
                 min-height: auto;
+            }
+
+        }
+
+        @media (max-width: 640px) {
+
+            .block-container {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+                padding-top: 1.25rem;
+            }
+
+            h1 {
+                font-size: 1.65rem;
+                line-height: 1.15;
+            }
+
+            .fixed-image-box {
+                height: 260px;
+            }
+
+            div[data-testid="stVerticalBlockBorderWrapper"] {
+                padding: 0.7rem;
+                margin-bottom: 1rem;
+            }
+
+            .stButton > button,
+            .stDownloadButton > button {
+                font-size: 0.9rem;
+                padding-top: 0.5rem;
+                padding-bottom: 0.5rem;
+            }
+
+            .kunst-title {
+                font-size: 1rem;
+                margin-top: 0.55rem;
+            }
+
+            .kunst-meta {
+                font-size: 0.84rem;
             }
 
         }
