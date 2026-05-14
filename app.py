@@ -448,10 +448,8 @@ else:
 
     if ansicht == "Galerieansicht":
 
-        st.components.v1.html(
-    galerie_grid_html(gefiltert),
-    height=1400,
-    scrolling=True,
+        st.html(
+    galerie_grid_html(gefiltert)
 )
 
     else:
