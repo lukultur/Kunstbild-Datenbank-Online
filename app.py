@@ -346,13 +346,17 @@ else:
                             unsafe_allow_html=True,
                         )
 
-                        aktion1, aktion2, aktion3, aktion4 = st.columns(4)
+                        aktion1, aktion2, aktion3, aktion4 = st.columns(
+                            [1, 1, 1, 1],
+                            gap="small",
+                        )
 
                         with aktion1:
                             if st.button(
                                 "⛶",
                                 key=f"gross_{row['id']}",
                                 help="Groß anzeigen",
+                                use_container_width=True,
                             ):
                                 st.session_state["ausgewaehlte_id"] = int(row["id"])
                                 st.session_state["ansicht"] = "Detailansicht"
@@ -372,6 +376,7 @@ else:
                                     mime="application/octet-stream",
                                     key=f"download_{row['id']}",
                                     help="Bild herunterladen",
+                                    use_container_width=True,
                                 )
 
                             except Exception:
@@ -380,6 +385,7 @@ else:
                                     disabled=True,
                                     key=f"download_disabled_{row['id']}",
                                     help="Download aktuell nicht verfügbar",
+                                    use_container_width=True,
                                 )
 
                         with aktion3:
@@ -404,6 +410,7 @@ else:
                                 "⋯",
                                 key=f"details_{row['id']}",
                                 help="Details öffnen",
+                                use_container_width=True,
                             ):
                                 st.session_state["ausgewaehlte_id"] = int(row["id"])
                                 st.session_state["ansicht"] = "Detailansicht"
