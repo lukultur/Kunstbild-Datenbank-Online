@@ -35,7 +35,7 @@ def lade_css():
 
         .fixed-image-box {
             width: 100%;
-            height: 230px;
+            height: 210px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -67,6 +67,13 @@ def lade_css():
             font-size: 0.86rem;
             line-height: 1.4;
             color: #e6e6e6;
+        }
+	.kunst-meta-kompakt {
+            min-height: 2.6em;
+            font-size: 0.86rem;
+            line-height: 1.35;
+            color: #d1d5db;
+            margin-bottom: 0.65rem;
         }
 
         .stButton > button,

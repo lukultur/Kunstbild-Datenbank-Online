@@ -461,72 +461,86 @@ else:
                             unsafe_allow_html=True,
                         )
 
-                        if st.button(
-                            "Groß anzeigen",
-                            key=f"gross_{row['id']}",
-                        ):
-
-                            st.session_state["ausgewaehlte_id"] = int(row["id"])
-                            st.session_state["ansicht"] = "Detailansicht"
-
-                            st.rerun()
-
-                        try:
-
-                            bild_download = requests.get(
-                                row["bildpfad"],
-                                timeout=20,
-                            ).content
-
-                            st.download_button(
-                                label="Bild herunterladen",
-                                data=bild_download,
-                                file_name=str(row["dateiname"]),
-                                mime="application/octet-stream",
-                                key=f"download_{row['id']}",
-                            )
-
-                        except Exception:
-
-                            st.info(
-                                "Download aktuell nicht verfügbar."
-                            )
-
-                        with st.popover("🗑️ Löschen"):
-
-                            st.warning("Wirklich löschen?")
-
-                            if st.button(
-                                "Ja, endgültig löschen",
-                                key=f"confirm_delete_gallery_{row['id']}",
-                            ):
-
-                                datensatz_loeschen(
-                                    row["id"],
-                                    row["dateiname"],
-                                    row.get("thumbnailpfad", ""),
-                                )
-
-                                st.success("Datensatz wurde gelöscht.")
-
-                                st.rerun()
-
-                        st.markdown(
+                                                st.markdown(
                             f'<div class="kunst-title">{kurzer_titel(row.get("titel", ""))}</div>',
                             unsafe_allow_html=True,
                         )
 
                         st.markdown(
                             f"""
-                            <div class="kunst-meta">
-                            <strong>{row.get("kuenstler", "") or "&nbsp;"}</strong><br>
-                            {row.get("jahr", "") or "&nbsp;"}<br>
-                            Stil: {row.get("stile", "") or "—"}<br>
-                            Gattung: {row.get("gattungen", "") or "—"}
+                            <div class="kunst-meta-kompakt">
+                                <strong>{row.get("kuenstler", "") or "&nbsp;"}</strong><br>
+                                {row.get("jahr", "") or "&nbsp;"}
                             </div>
                             """,
                             unsafe_allow_html=True,
                         )
+
+                        aktion1, aktion2, aktion3, aktion4 = st.columns(4)
+
+                        with aktion1:
+                            if st.button(
+                                "⛶",
+                                key=f"gross_{row['id']}",
+                                help="Groß anzeigen",
+                            ):
+                                st.session_state["ausgewaehlte_id"] = int(row["id"])
+                                st.session_state["ansicht"] = "Detailansicht"
+                                st.rerun()
+
+                        with aktion2:
+                            try:
+                                bild_download = requests.get(
+                                    row["bildpfad"],
+                                    timeout=20,
+                                ).content
+
+                                st.download_button(
+                                    label="⬇",
+                                    data=bild_download,
+                                    file_name=str(row["dateiname"]),
+                                    mime="application/octet-stream",
+                                    key=f"download_{row['id']}",
+                                    help="Bild herunterladen",
+                                )
+
+                            except Exception:
+                                st.button(
+                                    "⬇",
+                                    disabled=True,
+                                    key=f"download_disabled_{row['id']}",
+                                    help="Download aktuell nicht verfügbar",
+                                )
+
+                        with aktion3:
+                            with st.popover(
+                                "🗑",
+                                help="Löschen",
+                            ):
+                                st.warning("Wirklich löschen?")
+
+                                if st.button(
+                                    "Endgültig löschen",
+                                    key=f"confirm_delete_gallery_{row['id']}",
+                                ):
+                                    datensatz_loeschen(
+                                        row["id"],
+                                        row["dateiname"],
+                                        row.get("thumbnailpfad", ""),
+                                    )
+
+                                    st.success("Datensatz wurde gelöscht.")
+                                    st.rerun()
+
+                        with aktion4:
+                            if st.button(
+                                "⋯",
+                                key=f"details_{row['id']}",
+                                help="Details öffnen",
+                            ):
+                                st.session_state["ausgewaehlte_id"] = int(row["id"])
+                                st.session_state["ansicht"] = "Detailansicht"
+                                st.rerun()
 
     # =====================================================
     # DETAIL
