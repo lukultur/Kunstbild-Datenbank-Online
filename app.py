@@ -476,118 +476,72 @@ else:
 
     if ansicht == "Galerieansicht":
 
-        for start in range(0, len(gefiltert), 3):
+        # =====================================================
+# RESPONSIVE GALERIE
+# =====================================================
 
-            spalten = st.columns(3)
+mobile = st.toggle(
+    "Mobile Galerieansicht",
+    value=True,
+)
 
-            for i in range(3):
+anzahl_spalten = 2 if mobile else 3
 
-                if start + i >= len(gefiltert):
-                    continue
+for start in range(0, len(gefiltert), anzahl_spalten):
 
-                row = gefiltert.iloc[start + i]
+    spalten = st.columns(anzahl_spalten)
 
-                bild_url = (
-                    row["thumbnailpfad"]
-                    if row["thumbnailpfad"]
-                    else row["bildpfad"]
+    for i in range(anzahl_spalten):
+
+        if start + i >= len(gefiltert):
+            continue
+
+        row = gefiltert.iloc[start + i]
+
+        bild_url = (
+            row["thumbnailpfad"]
+            if row["thumbnailpfad"]
+            else row["bildpfad"]
+        )
+
+        with spalten[i]:
+
+            with st.container(border=True):
+
+                st.markdown(
+                    bild_html(bild_url),
+                    unsafe_allow_html=True,
                 )
 
-                with spalten[i]:
+                st.markdown(
+                    f"""
+                    <div class="kunst-title">
+                        {kurzer_titel(row.get("titel", ""), 24)}
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
-                    with st.container(border=True):
+                st.markdown(
+                    f"""
+                    <div class="kunst-meta-kompakt">
+                        <strong>{row.get("kuenstler", "")}</strong><br>
+                        {row.get("jahr", "")}
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
-                        st.markdown(
-                            bild_html(bild_url),
-                            unsafe_allow_html=True,
-                        )
+                if st.button(
+                    "Öffnen",
+                    key=f"open_{row['id']}",
+                    use_container_width=True,
+                ):
 
-                        st.markdown(
-                            f"""
-                            <div class="kunst-title">
-                                {kurzer_titel(row.get("titel", ""))}
-                            </div>
-                            """,
-                            unsafe_allow_html=True,
-                        )
+                    st.session_state["ausgewaehlte_id"] = int(row["id"])
+                    st.session_state["ansicht"] = "Detailansicht"
 
-                        st.markdown(
-                            f"""
-                            <div class="kunst-meta-kompakt">
-                                <strong>{row.get("kuenstler", "")}</strong><br>
-                                {row.get("jahr", "")}
-                            </div>
-                            """,
-                            unsafe_allow_html=True,
-                        )
-
-                        aktion1, aktion2 = st.columns(
-                            [1, 1],
-                            gap="small",
-                        )
-
-                        with aktion1:
-
-                            if st.button(
-                                "⛶",
-                                key=f"gross_{row['id']}",
-                                help="Detailansicht öffnen",
-                                use_container_width=True,
-                            ):
-
-                                st.session_state["ausgewaehlte_id"] = int(row["id"])
-                                st.session_state["ansicht"] = "Detailansicht"
-
-                                st.rerun()
-
-                        with aktion2:
-
-                            with st.popover(
-                                "⋯",
-                                use_container_width=True,
-                            ):
-
-                                try:
-
-                                    bild_download = requests.get(
-                                        row["bildpfad"],
-                                        timeout=20,
-                                    ).content
-
-                                    st.download_button(
-                                        label="⬇ Bild herunterladen",
-                                        data=bild_download,
-                                        file_name=str(row["dateiname"]),
-                                        mime="application/octet-stream",
-                                        key=f"download_{row['id']}",
-                                        use_container_width=True,
-                                    )
-
-                                except Exception:
-
-                                    st.info(
-                                        "Download aktuell nicht verfügbar."
-                                    )
-
-                                st.divider()
-
-                                if st.button(
-                                    "🗑 Datensatz löschen",
-                                    key=f"confirm_delete_gallery_{row['id']}",
-                                    use_container_width=True,
-                                ):
-
-                                    datensatz_loeschen(
-                                        row["id"],
-                                        row["dateiname"],
-                                        row.get("thumbnailpfad", ""),
-                                    )
-
-                                    st.success(
-                                        "Datensatz wurde gelöscht."
-                                    )
-
-                                    st.rerun()
+                    st.rerun()
 
 
     # =====================================================
