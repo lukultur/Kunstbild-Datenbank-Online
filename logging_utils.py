@@ -18,6 +18,8 @@ def log_activity(
     artwork_title="",
     details="",
 ):
+    print("LOGGING WIRD AUSGEFÜHRT")
+
     try:
         (
             supabase_logging.table("activity_log")
