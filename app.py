@@ -443,7 +443,7 @@ else:
                                         )
 
                                         st.success("Datensatz wurde gelöscht.")
-                                       # st.rerun()
+                                         st.rerun()
 
     else:
 
@@ -645,4 +645,4 @@ else:
                             st.success("Datensatz wurde gelöscht.")
                             st.session_state["ansicht"] = "Galerieansicht"
                             st.session_state["ausgewaehlte_id"] = None
-                           # st.rerun()
+                             st.rerun()
