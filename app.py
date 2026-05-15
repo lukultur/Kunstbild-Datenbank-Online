@@ -33,6 +33,8 @@ from auth import (
     get_current_role,
 )
 
+from admin import admin_benutzerverwaltung
+
 
 st.set_page_config(
     page_title="Kunstbild-Datenbank",
@@ -66,6 +68,7 @@ def kurzer_titel(text, max_laenge=32):
 
 rolle = get_current_role()
 
+darf_admin = rolle == "admin"
 darf_upload = rolle in ["admin", "redakteur"]
 darf_bearbeiten = rolle in ["admin", "redakteur"]
 darf_loeschen = rolle in ["admin", "redakteur"]
@@ -93,12 +96,14 @@ with st.sidebar:
 
     st.caption(f"Angemeldet als: {get_current_email()}")
     st.caption(f"Rolle: {rolle}")
-    st.success("Rechtemodul aktiv")
 
     bereiche = ["Archiv durchsuchen"]
 
     if darf_upload:
         bereiche.append("Neues Bild hinzufügen")
+
+    if darf_admin:
+        bereiche.append("Benutzerverwaltung")
 
     if st.session_state["seite"] not in bereiche:
         st.session_state["seite"] = "Archiv durchsuchen"
@@ -118,7 +123,12 @@ with st.sidebar:
         st.rerun()
 
 
-if st.session_state["seite"] == "Neues Bild hinzufügen" and darf_upload:
+if st.session_state["seite"] == "Benutzerverwaltung" and darf_admin:
+
+    admin_benutzerverwaltung()
+
+
+elif st.session_state["seite"] == "Neues Bild hinzufügen" and darf_upload:
 
     st.header("Neue Bilder hinzufügen")
 
