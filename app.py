@@ -30,7 +30,7 @@ from auth import (
     is_logged_in,
     logout,
     get_current_email,
-    get current role,
+    get_current_role,
 )
 
 
