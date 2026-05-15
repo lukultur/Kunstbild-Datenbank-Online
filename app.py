@@ -67,6 +67,10 @@ def kurzer_titel(text, max_laenge=32):
     return text
 
 
+def filter_optionen(werte, optionen):
+    return [wert for wert in werte if wert in optionen]
+
+
 rolle = get_current_role()
 user_email = get_current_email()
 
@@ -149,21 +153,11 @@ elif st.session_state["seite"] == "Neues Bild hinzufügen" and darf_upload:
     titel_neu = st.text_input("Titel")
     jahr_neu = st.text_input("Jahr")
 
-    stile_neu = st.multiselect("Stil / Epoche", STIL_OPTIONEN)
-    techniken_neu = st.multiselect("Techniken", TECHNIK_OPTIONEN)
-    gattungen_neu = st.multiselect("Gattung / Motiv", GATTUNG_OPTIONEN)
-
-    technik_neu = ""
-    beschreibung_neu = ""
-    schlagworte_neu = ""
-
     if uploaded_files:
-        erste_datei = uploaded_files[0]
-
         if st.button("KI-Analyse durchführen"):
             with st.spinner("KI analysiert Bild ..."):
                 analyse = ki_upload_analyse(
-                    erste_datei,
+                    uploaded_files[0],
                     kuenstler_neu,
                     titel_neu,
                     jahr_neu,
@@ -172,23 +166,63 @@ elif st.session_state["seite"] == "Neues Bild hinzufügen" and darf_upload:
                 st.session_state["ki_upload_analyse"] = analyse
                 st.rerun()
 
-        analyse = st.session_state.get("ki_upload_analyse", {})
+    analyse = st.session_state.get("ki_upload_analyse", {})
 
-        if analyse:
-            technik_neu = analyse.get("technik", "")
-            beschreibung_neu = analyse.get("beschreibung", "")
-            schlagworte_neu = analyse.get("schlagworte", "")
+    technik_default = analyse.get("technik", "")
+    beschreibung_default = analyse.get("beschreibung", "")
+    schlagworte_default = analyse.get("schlagworte", "")
 
-            stile_neu = text_zu_liste(analyse.get("stile", ""))
-            techniken_neu = text_zu_liste(analyse.get("techniken", ""))
-            gattungen_neu = text_zu_liste(analyse.get("gattungen", ""))
+    stile_default = filter_optionen(
+        text_zu_liste(analyse.get("stile", "")),
+        STIL_OPTIONEN,
+    )
 
-    technik_neu = st.text_input("Technik", value=technik_neu)
+    techniken_default = filter_optionen(
+        text_zu_liste(analyse.get("techniken", "")),
+        TECHNIK_OPTIONEN,
+    )
+
+    gattungen_default = filter_optionen(
+        text_zu_liste(analyse.get("gattungen", "")),
+        GATTUNG_OPTIONEN,
+    )
+
+    stile_neu = st.multiselect(
+        "Stil / Epoche",
+        STIL_OPTIONEN,
+        default=stile_default,
+    )
+
+    techniken_neu = st.multiselect(
+        "Techniken",
+        TECHNIK_OPTIONEN,
+        default=techniken_default,
+    )
+
+    gattungen_neu = st.multiselect(
+        "Gattung / Motiv",
+        GATTUNG_OPTIONEN,
+        default=gattungen_default,
+    )
+
+    technik_neu = st.text_input(
+        "Technik",
+        value=technik_default,
+    )
+
     masse_neu = st.text_input("Maße")
     standort_neu = st.text_input("Standort")
     rechte_neu = st.text_input("Rechte")
-    beschreibung_neu = st.text_area("Beschreibung", value=beschreibung_neu)
-    schlagworte_neu = st.text_input("Schlagworte", value=schlagworte_neu)
+
+    beschreibung_neu = st.text_area(
+        "Beschreibung",
+        value=beschreibung_default,
+    )
+
+    schlagworte_neu = st.text_input(
+        "Schlagworte",
+        value=schlagworte_default,
+    )
 
     if uploaded_files:
         st.write(f"{len(uploaded_files)} Bilddatei(en) ausgewählt")
@@ -246,6 +280,7 @@ elif st.session_state["seite"] == "Neues Bild hinzufügen" and darf_upload:
                 gespeichert += 1
 
             st.session_state["ki_upload_analyse"] = {}
+
             st.success(f"{gespeichert} Bilder gespeichert.")
             st.session_state["seite"] = "Archiv durchsuchen"
             st.session_state["ansicht"] = "Galerieansicht"
