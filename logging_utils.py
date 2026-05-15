@@ -33,8 +33,6 @@ def log_activity(
             .execute()
         )
 
-        st.success("Logging wurde ausgeführt.")
-        st.write(response)
-
+       
     except Exception as error:
         st.error(f"Logging-Fehler: {error}")
