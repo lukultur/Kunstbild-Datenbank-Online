@@ -18,10 +18,8 @@ def log_activity(
     artwork_title="",
     details="",
 ):
-    print("LOGGING WIRD AUSGEFÜHRT")
-
     try:
-        (
+        response = (
             supabase_logging.table("activity_log")
             .insert(
                 {
@@ -34,6 +32,9 @@ def log_activity(
             )
             .execute()
         )
+
+        st.success("Logging wurde ausgeführt.")
+        st.write(response)
 
     except Exception as error:
         st.error(f"Logging-Fehler: {error}")
