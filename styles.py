@@ -6,55 +6,19 @@ def lade_css():
         """
         <style>
 
-        .stApp {
-            background-color: #050816;
-            color: #f5f5f5;
-        }
-
-        section[data-testid="stSidebar"] {
-            background-color: #262730;
-        }
-
-        .block-container {
-            padding-top: 2rem;
-            padding-bottom: 2rem;
-            max-width: 1500px;
-        }
-
-        h1, h2, h3, h4 {
-            color: #fff5ee;
-        }
-
-        .kunst-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 1.2rem;
-        }
-
-        .kunst-card {
-            background: #0c1224;
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 16px;
-            overflow: hidden;
-            padding: 1rem;
-            height: 100%;
-        }
-
-        .kunstbild-wrapper {
+        .fixed-image-box {
             width: 100%;
-            height: 320px;
-            background: #0a1020;
-            border-radius: 14px;
-            overflow: hidden;
-
+            height: 210px;
             display: flex;
             align-items: center;
             justify-content: center;
-
-            margin-bottom: 1rem;
+            background: #141820;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 0.65rem;
         }
 
-        .kunstbild-wrapper img {
+        .fixed-image-box img {
             max-width: 100%;
             max-height: 100%;
             object-fit: contain;
@@ -62,36 +26,31 @@ def lade_css():
         }
 
         .kunst-title {
-            font-size: 1.15rem;
+            height: 2.6em;
+            overflow: hidden;
+            font-size: 0.95rem;
             font-weight: 700;
             line-height: 1.3;
-            color: white;
-
-            min-height: 3.2rem;
-            margin-bottom: 0.6rem;
-
-            overflow: hidden;
+            margin-top: 0.45rem;
+            margin-bottom: 0.35rem;
         }
 
         .kunst-meta-kompakt {
-            color: #d0d0d0;
-            font-size: 0.95rem;
-            line-height: 1.45;
-
-            min-height: 4rem;
-            margin-bottom: 1rem;
+            min-height: 2.4em;
+            font-size: 0.82rem;
+            line-height: 1.35;
+            margin-bottom: 0.5rem;
         }
 
-        .stButton button {
-            border-radius: 10px;
+        div[data-testid="stVerticalBlockBorderWrapper"] {
+            padding: 0.75rem;
+            border-radius: 12px;
         }
 
-        .stDownloadButton button {
-            border-radius: 10px;
-        }
-
-        div[data-testid="stPopover"] button {
-            border-radius: 10px;
+        .stButton > button,
+        .stDownloadButton > button {
+            min-height: 2.2rem;
+            border-radius: 8px;
         }
 
         </style>
