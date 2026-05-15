@@ -30,6 +30,7 @@ from auth import (
     is_logged_in,
     logout,
     get_current_email,
+    get current role,
 )
 
 
@@ -91,6 +92,7 @@ with st.sidebar:
     st.header("Navigation")
 
     st.caption(f"Angemeldet als: {get_current_email()}")
+    st.caption(f"Rolle: {get_current_role()}")
 
     seite = st.radio(
         "Bereich wählen",

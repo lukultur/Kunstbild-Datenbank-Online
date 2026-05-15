@@ -1,5 +1,6 @@
 import streamlit as st
 from supabase import create_client
+from supabase import Client
 
 
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
@@ -19,7 +20,19 @@ def init_auth_state():
         st.session_state["auth_email"] = ""
 
     if "auth_role" not in st.session_state:
-        st.session_state["auth_role"] = "nutzer"
+        role_response = (
+    supabase_auth.table("user_roles")
+    .select("role")
+    .eq("email", user.email)
+    .execute()
+)
+
+rolle = "nutzer"
+
+if role_response.data:
+    rolle = role_response.data[0]["role"]
+
+st.session_state["auth_role"] = rolle
 
     if "auth_session" not in st.session_state:
         st.session_state["auth_session"] = None
