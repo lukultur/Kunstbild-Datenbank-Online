@@ -164,7 +164,7 @@ def login_view():
         )
 
         if st.button("Registrieren"):
-            if register_password != register_password_repeat:
+            if register_password.strip() != register_password_repeat.strip():
                 st.error("Die Passwörter stimmen nicht überein.")
 
             elif len(register_password) < 8:
@@ -173,7 +173,7 @@ def login_view():
             else:
                 success, message = register(
                     register_email,
-                    register_password,
+                    register_password.strip(),
                 )
 
                 if success:
