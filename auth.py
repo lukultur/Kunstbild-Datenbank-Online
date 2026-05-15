@@ -1,6 +1,6 @@
 import streamlit as st
 from supabase import create_client
-from supabase import Client
+
 
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
@@ -19,19 +19,7 @@ def init_auth_state():
         st.session_state["auth_email"] = ""
 
     if "auth_role" not in st.session_state:
-        role_response = (
-    supabase_auth.table("user_roles")
-    .select("role")
-    .eq("email", user.email)
-    .execute()
-)
-
-rolle = "nutzer"
-
-if role_response.data:
-    rolle = role_response.data[0]["role"]
-
-st.session_state["auth_role"] = rolle
+        st.session_state["auth_role"] = "nutzer"
 
     if "auth_session" not in st.session_state:
         st.session_state["auth_session"] = None
@@ -56,11 +44,29 @@ def has_role(*roles):
     return get_current_role() in roles
 
 
+def lade_rolle(email):
+    try:
+        role_response = (
+            supabase_auth.table("user_roles")
+            .select("role")
+            .eq("email", email)
+            .execute()
+        )
+
+        if role_response.data:
+            return role_response.data[0].get("role", "nutzer")
+
+        return "nutzer"
+
+    except Exception:
+        return "nutzer"
+
+
 def login(email, password):
     try:
         response = supabase_auth.auth.sign_in_with_password(
             {
-                "email": email,
+                "email": email.strip(),
                 "password": password,
             }
         )
@@ -71,10 +77,12 @@ def login(email, password):
         if not user:
             return False, "Login fehlgeschlagen."
 
+        rolle = lade_rolle(user.email)
+
         st.session_state["auth_user"] = user
         st.session_state["auth_email"] = user.email
         st.session_state["auth_session"] = session
-        st.session_state["auth_role"] = "nutzer"
+        st.session_state["auth_role"] = rolle
 
         return True, "Login erfolgreich."
 
@@ -98,8 +106,8 @@ def register(email, password):
     try:
         response = supabase_auth.auth.sign_up(
             {
-                "email": email,
-                "password": password,
+                "email": email.strip(),
+                "password": password.strip(),
             }
         )
 
@@ -114,8 +122,7 @@ def register(email, password):
 
 def reset_password(email):
     try:
-        supabase_auth.auth.reset_password_email(email)
-
+        supabase_auth.auth.reset_password_email(email.strip())
         return True, "E-Mail zum Zurücksetzen des Passworts wurde versendet."
 
     except Exception as error:
@@ -179,13 +186,13 @@ def login_view():
             if register_password.strip() != register_password_repeat.strip():
                 st.error("Die Passwörter stimmen nicht überein.")
 
-            elif len(register_password) < 8:
+            elif len(register_password.strip()) < 8:
                 st.error("Das Passwort muss mindestens 8 Zeichen lang sein.")
 
             else:
                 success, message = register(
                     register_email,
-                    register_password.strip(),
+                    register_password,
                 )
 
                 if success:
