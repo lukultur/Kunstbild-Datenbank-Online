@@ -34,6 +34,7 @@ from auth import (
 )
 
 from admin import admin_benutzerverwaltung
+from logging_utils import log_activity
 
 
 st.set_page_config(
@@ -67,6 +68,7 @@ def kurzer_titel(text, max_laenge=32):
 
 
 rolle = get_current_role()
+user_email = get_current_email()
 
 darf_admin = rolle == "admin"
 darf_upload = rolle in ["admin", "redakteur"]
@@ -94,7 +96,7 @@ st.caption("Recherche, Vorschau, Upload, Export und Verwaltung deiner Kunstbilde
 with st.sidebar:
     st.header("Navigation")
 
-    st.caption(f"Angemeldet als: {get_current_email()}")
+    st.caption(f"Angemeldet als: {user_email}")
     st.caption(f"Rolle: {rolle}")
 
     bereiche = ["Archiv durchsuchen"]
@@ -212,10 +214,12 @@ elif st.session_state["seite"] == "Neues Bild hinzufügen" and darf_upload:
                     thumbnail_url,
                 ) = bild_nach_supabase(uploaded_file)
 
+                werk_titel = titel_neu if titel_neu else uploaded_file.name
+
                 daten = {
                     "dateiname": eindeutiger_name,
                     "kuenstler": kuenstler_neu,
-                    "titel": titel_neu if titel_neu else uploaded_file.name,
+                    "titel": werk_titel,
                     "jahr": jahr_neu,
                     "technik": technik_neu,
                     "masse": masse_neu,
@@ -231,6 +235,14 @@ elif st.session_state["seite"] == "Neues Bild hinzufügen" and darf_upload:
                 }
 
                 datensatz_speichern(daten)
+
+                log_activity(
+                    user_email=user_email,
+                    action="upload",
+                    artwork_title=werk_titel,
+                    details=f"Datei hochgeladen: {uploaded_file.name}",
+                )
+
                 gespeichert += 1
 
             st.session_state["ki_upload_analyse"] = {}
@@ -416,6 +428,14 @@ else:
                                         key=f"confirm_delete_gallery_{row['id']}",
                                         use_container_width=True,
                                     ):
+                                        log_activity(
+                                            user_email=user_email,
+                                            action="delete",
+                                            artwork_id=int(row["id"]),
+                                            artwork_title=str(row.get("titel", "")),
+                                            details="Datensatz aus Galerie gelöscht.",
+                                        )
+
                                         datensatz_loeschen(
                                             row["id"],
                                             row["dateiname"],
@@ -586,6 +606,15 @@ else:
                             }
 
                             datensatz_aktualisieren(row["id"], neue_daten)
+
+                            log_activity(
+                                user_email=user_email,
+                                action="edit",
+                                artwork_id=int(row["id"]),
+                                artwork_title=str(bearb_titel),
+                                details="Datensatz bearbeitet.",
+                            )
+
                             st.success("Änderungen wurden gespeichert.")
                             st.rerun()
 
@@ -599,6 +628,14 @@ else:
                             "Ja, endgültig löschen",
                             key=f"confirm_delete_detail_{row['id']}",
                         ):
+                            log_activity(
+                                user_email=user_email,
+                                action="delete",
+                                artwork_id=int(row["id"]),
+                                artwork_title=str(row.get("titel", "")),
+                                details="Datensatz aus Detailansicht gelöscht.",
+                            )
+
                             datensatz_loeschen(
                                 row["id"],
                                 row["dateiname"],
