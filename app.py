@@ -50,12 +50,7 @@ if not is_logged_in():
 def text_zu_liste(text):
     if not text:
         return []
-
-    return [
-        x.strip()
-        for x in str(text).split(",")
-        if x.strip()
-    ]
+    return [x.strip() for x in str(text).split(",") if x.strip()]
 
 
 def liste_zu_text(liste):
@@ -64,11 +59,16 @@ def liste_zu_text(liste):
 
 def kurzer_titel(text, max_laenge=32):
     text = str(text)
-
     if len(text) > max_laenge:
         return text[:max_laenge] + "..."
-
     return text
+
+
+rolle = get_current_role()
+
+darf_upload = rolle in ["admin", "redakteur"]
+darf_bearbeiten = rolle in ["admin", "redakteur"]
+darf_loeschen = rolle in ["admin", "redakteur"]
 
 
 if "seite" not in st.session_state:
@@ -92,12 +92,21 @@ with st.sidebar:
     st.header("Navigation")
 
     st.caption(f"Angemeldet als: {get_current_email()}")
-    st.caption(f"Rolle: {get_current_role()}")
+    st.caption(f"Rolle: {rolle}")
+    st.success("Rechtemodul aktiv")
+
+    bereiche = ["Archiv durchsuchen"]
+
+    if darf_upload:
+        bereiche.append("Neues Bild hinzufügen")
+
+    if st.session_state["seite"] not in bereiche:
+        st.session_state["seite"] = "Archiv durchsuchen"
 
     seite = st.radio(
         "Bereich wählen",
-        ["Archiv durchsuchen", "Neues Bild hinzufügen"],
-        index=0 if st.session_state["seite"] == "Archiv durchsuchen" else 1,
+        bereiche,
+        index=bereiche.index(st.session_state["seite"]),
     )
 
     st.session_state["seite"] = seite
@@ -109,7 +118,7 @@ with st.sidebar:
         st.rerun()
 
 
-if st.session_state["seite"] == "Neues Bild hinzufügen":
+if st.session_state["seite"] == "Neues Bild hinzufügen" and darf_upload:
 
     st.header("Neue Bilder hinzufügen")
 
@@ -389,21 +398,22 @@ else:
                                 except Exception:
                                     st.info("Download aktuell nicht verfügbar.")
 
-                                st.divider()
+                                if darf_loeschen:
+                                    st.divider()
 
-                                if st.button(
-                                    "🗑 Datensatz löschen",
-                                    key=f"confirm_delete_gallery_{row['id']}",
-                                    use_container_width=True,
-                                ):
-                                    datensatz_loeschen(
-                                        row["id"],
-                                        row["dateiname"],
-                                        row.get("thumbnailpfad", ""),
-                                    )
+                                    if st.button(
+                                        "🗑 Datensatz löschen",
+                                        key=f"confirm_delete_gallery_{row['id']}",
+                                        use_container_width=True,
+                                    ):
+                                        datensatz_loeschen(
+                                            row["id"],
+                                            row["dateiname"],
+                                            row.get("thumbnailpfad", ""),
+                                        )
 
-                                    st.success("Datensatz wurde gelöscht.")
-                                    st.rerun()
+                                        st.success("Datensatz wurde gelöscht.")
+                                        st.rerun()
 
     else:
 
@@ -478,112 +488,114 @@ else:
                 st.write(f"**Beschreibung:** {row.get('beschreibung', '')}")
                 st.write(f"**Schlagworte:** {row.get('schlagworte', '')}")
 
-                st.divider()
+                if darf_bearbeiten:
+                    st.divider()
 
-                with st.expander("Datensatz bearbeiten"):
-                    with st.form(key=f"bearbeiten_form_{row['id']}"):
+                    with st.expander("Datensatz bearbeiten"):
+                        with st.form(key=f"bearbeiten_form_{row['id']}"):
 
-                        bearb_kuenstler = st.text_input(
-                            "Künstler",
-                            value=str(row.get("kuenstler", "")),
-                        )
+                            bearb_kuenstler = st.text_input(
+                                "Künstler",
+                                value=str(row.get("kuenstler", "")),
+                            )
 
-                        bearb_titel = st.text_input(
-                            "Titel",
-                            value=str(row.get("titel", "")),
-                        )
+                            bearb_titel = st.text_input(
+                                "Titel",
+                                value=str(row.get("titel", "")),
+                            )
 
-                        bearb_jahr = st.text_input(
-                            "Jahr",
-                            value=str(row.get("jahr", "")),
-                        )
+                            bearb_jahr = st.text_input(
+                                "Jahr",
+                                value=str(row.get("jahr", "")),
+                            )
 
-                        bearb_technik = st.text_input(
-                            "Technik",
-                            value=str(row.get("technik", "")),
-                        )
+                            bearb_technik = st.text_input(
+                                "Technik",
+                                value=str(row.get("technik", "")),
+                            )
 
-                        bearb_masse = st.text_input(
-                            "Maße",
-                            value=str(row.get("masse", "")),
-                        )
+                            bearb_masse = st.text_input(
+                                "Maße",
+                                value=str(row.get("masse", "")),
+                            )
 
-                        bearb_standort = st.text_input(
-                            "Standort",
-                            value=str(row.get("standort", "")),
-                        )
+                            bearb_standort = st.text_input(
+                                "Standort",
+                                value=str(row.get("standort", "")),
+                            )
 
-                        bearb_rechte = st.text_input(
-                            "Rechte",
-                            value=str(row.get("rechte", "")),
-                        )
+                            bearb_rechte = st.text_input(
+                                "Rechte",
+                                value=str(row.get("rechte", "")),
+                            )
 
-                        bearb_stile = st.multiselect(
-                            "Stil / Epoche",
-                            STIL_OPTIONEN,
-                            default=text_zu_liste(row.get("stile", "")),
-                        )
+                            bearb_stile = st.multiselect(
+                                "Stil / Epoche",
+                                STIL_OPTIONEN,
+                                default=text_zu_liste(row.get("stile", "")),
+                            )
 
-                        bearb_techniken = st.multiselect(
-                            "Techniken",
-                            TECHNIK_OPTIONEN,
-                            default=text_zu_liste(row.get("techniken", "")),
-                        )
+                            bearb_techniken = st.multiselect(
+                                "Techniken",
+                                TECHNIK_OPTIONEN,
+                                default=text_zu_liste(row.get("techniken", "")),
+                            )
 
-                        bearb_gattungen = st.multiselect(
-                            "Gattung / Motiv",
-                            GATTUNG_OPTIONEN,
-                            default=text_zu_liste(row.get("gattungen", "")),
-                        )
+                            bearb_gattungen = st.multiselect(
+                                "Gattung / Motiv",
+                                GATTUNG_OPTIONEN,
+                                default=text_zu_liste(row.get("gattungen", "")),
+                            )
 
-                        bearb_beschreibung = st.text_area(
-                            "Beschreibung",
-                            value=str(row.get("beschreibung", "")),
-                        )
+                            bearb_beschreibung = st.text_area(
+                                "Beschreibung",
+                                value=str(row.get("beschreibung", "")),
+                            )
 
-                        bearb_schlagworte = st.text_input(
-                            "Schlagworte",
-                            value=str(row.get("schlagworte", "")),
-                        )
+                            bearb_schlagworte = st.text_input(
+                                "Schlagworte",
+                                value=str(row.get("schlagworte", "")),
+                            )
 
-                        speichern = st.form_submit_button("Änderungen speichern")
+                            speichern = st.form_submit_button("Änderungen speichern")
 
-                    if speichern:
-                        neue_daten = {
-                            "kuenstler": bearb_kuenstler,
-                            "titel": bearb_titel,
-                            "jahr": bearb_jahr,
-                            "technik": bearb_technik,
-                            "masse": bearb_masse,
-                            "standort": bearb_standort,
-                            "rechte": bearb_rechte,
-                            "beschreibung": bearb_beschreibung,
-                            "schlagworte": bearb_schlagworte,
-                            "stile": liste_zu_text(bearb_stile),
-                            "techniken": liste_zu_text(bearb_techniken),
-                            "gattungen": liste_zu_text(bearb_gattungen),
-                        }
+                        if speichern:
+                            neue_daten = {
+                                "kuenstler": bearb_kuenstler,
+                                "titel": bearb_titel,
+                                "jahr": bearb_jahr,
+                                "technik": bearb_technik,
+                                "masse": bearb_masse,
+                                "standort": bearb_standort,
+                                "rechte": bearb_rechte,
+                                "beschreibung": bearb_beschreibung,
+                                "schlagworte": bearb_schlagworte,
+                                "stile": liste_zu_text(bearb_stile),
+                                "techniken": liste_zu_text(bearb_techniken),
+                                "gattungen": liste_zu_text(bearb_gattungen),
+                            }
 
-                        datensatz_aktualisieren(row["id"], neue_daten)
-                        st.success("Änderungen wurden gespeichert.")
-                        st.rerun()
+                            datensatz_aktualisieren(row["id"], neue_daten)
+                            st.success("Änderungen wurden gespeichert.")
+                            st.rerun()
 
-                st.divider()
+                if darf_loeschen:
+                    st.divider()
 
-                with st.popover("🗑 Datensatz löschen"):
-                    st.warning("Diesen Datensatz wirklich endgültig löschen?")
+                    with st.popover("🗑 Datensatz löschen"):
+                        st.warning("Diesen Datensatz wirklich endgültig löschen?")
 
-                    if st.button(
-                        "Ja, endgültig löschen",
-                        key=f"confirm_delete_detail_{row['id']}",
-                    ):
-                        datensatz_loeschen(
-                            row["id"],
-                            row["dateiname"],
-                            row.get("thumbnailpfad", ""),
-                        )
+                        if st.button(
+                            "Ja, endgültig löschen",
+                            key=f"confirm_delete_detail_{row['id']}",
+                        ):
+                            datensatz_loeschen(
+                                row["id"],
+                                row["dateiname"],
+                                row.get("thumbnailpfad", ""),
+                            )
 
-                        st.success("Datensatz wurde gelöscht.")
-                        st.session_state["ansicht"] = "Galerieansicht"
-                        st.session_state["ausgewaehlte_id"] = None
-                        st.rerun()
+                            st.success("Datensatz wurde gelöscht.")
+                            st.session_state["ansicht"] = "Galerieansicht"
+                            st.session_state["ausgewaehlte_id"] = None
+                            st.rerun()
