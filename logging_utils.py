@@ -36,4 +36,4 @@ def log_activity(
         )
 
     except Exception as error:
-    st.error(f"Logging-Fehler: {error}")
+        st.error(f"Logging-Fehler: {error}")
