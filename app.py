@@ -259,6 +259,7 @@ elif st.session_state["seite"] == "Neues Bild hinzufügen" and darf_upload:
                     "masse": masse_neu,
                     "standort": standort_neu,
                     "rechte": rechte_neu,
+		    "owner_email": user_email,
                     "beschreibung": beschreibung_neu,
                     "schlagworte": schlagworte_neu,
                     "bildpfad": public_url,
