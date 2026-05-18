@@ -321,8 +321,7 @@ elif st.session_state["seite"] == "Neues Bild hinzufügen" and darf_upload:
 else:
 
     df = daten_laden()
-    st.write(df[["deleted_at"]].head(20))
-
+    
     if "deleted_at" in df.columns:
         df = df[
             df["deleted_at"].isna()
