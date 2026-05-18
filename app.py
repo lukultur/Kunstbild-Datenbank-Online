@@ -548,6 +548,7 @@ else:
                 st.write(f"**Maße:** {row.get('masse', '')}")
                 st.write(f"**Standort:** {row.get('standort', '')}")
                 st.write(f"**Rechte:** {row.get('rechte', '')}")
+                st.write(f"**Besitzer:** {row.get('owner_email', '')}")
                 st.write(f"**Stil / Epoche:** {row.get('stile', '')}")
                 st.write(f"**Techniken:** {row.get('techniken', '')}")
                 st.write(f"**Gattung / Motiv:** {row.get('gattungen', '')}")
