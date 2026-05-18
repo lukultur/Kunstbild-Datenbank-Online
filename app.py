@@ -664,7 +664,7 @@ else:
                 if darf_admin or (
                                                    rolle == "redakteur"
                                                    and row.get("owner_email", "") == user_email
-)::
+):
                     st.divider()
 
                     with st.popover("🗑 Datensatz löschen"):
