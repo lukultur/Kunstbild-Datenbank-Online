@@ -71,13 +71,21 @@ def filter_optionen(werte, optionen):
     return [wert for wert in werte if wert in optionen]
 
 
-rolle = get_current_role()
+def darf_werk_verwalten(row, rolle, user_email):
+    if rolle == "admin":
+        return True
+
+    if rolle == "redakteur":
+        return str(row.get("owner_email", "")).lower() == str(user_email).lower()
+
+    return False
+
+
+rolle = get_current_role().lower()
 user_email = get_current_email()
 
 darf_admin = rolle == "admin"
 darf_upload = rolle in ["admin", "redakteur"]
-darf_bearbeiten = rolle in ["admin", "redakteur"]
-darf_loeschen = rolle in ["admin", "redakteur"]
 
 
 if "seite" not in st.session_state:
@@ -259,7 +267,7 @@ elif st.session_state["seite"] == "Neues Bild hinzufügen" and darf_upload:
                     "masse": masse_neu,
                     "standort": standort_neu,
                     "rechte": rechte_neu,
-		    "owner_email": user_email,
+                    "owner_email": user_email,
                     "beschreibung": beschreibung_neu,
                     "schlagworte": schlagworte_neu,
                     "bildpfad": public_url,
@@ -389,6 +397,7 @@ else:
                     continue
 
                 row = gefiltert.iloc[start + i]
+                kann_verwalten = darf_werk_verwalten(row, rolle, user_email)
 
                 bild_url = (
                     row["thumbnailpfad"]
@@ -456,10 +465,7 @@ else:
                                 except Exception:
                                     st.info("Download aktuell nicht verfügbar.")
 
-                                if darf_admin or (
-                                                                                              rolle == "redakteur"
-                                                                                              and row.get("owner_email", "") == user_email
-):
+                                if kann_verwalten:
                                     st.divider()
 
                                     if st.button(
@@ -513,6 +519,7 @@ else:
 
             index = auswahl_liste.index(auswahl)
             row = gefiltert.iloc[index]
+            kann_verwalten = darf_werk_verwalten(row, rolle, user_email)
 
             if st.button("← Zurück zur Galerie"):
                 st.session_state["ansicht"] = "Galerieansicht"
@@ -558,10 +565,45 @@ else:
                 st.write(f"**Beschreibung:** {row.get('beschreibung', '')}")
                 st.write(f"**Schlagworte:** {row.get('schlagworte', '')}")
 
-                if darf_admin or (
-  		    rolle == "redakteur"
-    		   and row.get("owner_email", "") == user_email
-):
+                if darf_admin:
+                    st.divider()
+
+                    with st.expander("Besitzer ändern"):
+                        neuer_besitzer = st.text_input(
+                            "Neue Besitzer-E-Mail",
+                            value=str(row.get("owner_email", "")),
+                            key=f"owner_email_{row['id']}",
+                        )
+
+                        if st.button(
+                            "Besitzer speichern",
+                            key=f"owner_save_{row['id']}",
+                            use_container_width=True,
+                        ):
+                            alter_besitzer = str(row.get("owner_email", ""))
+
+                            datensatz_aktualisieren(
+                                row["id"],
+                                {
+                                    "owner_email": neuer_besitzer.strip().lower(),
+                                },
+                            )
+
+                            log_activity(
+                                user_email=user_email,
+                                action="owner_change",
+                                artwork_id=int(row["id"]),
+                                artwork_title=str(row.get("titel", "")),
+                                details=(
+                                    f"Besitzer geändert von "
+                                    f"{alter_besitzer} zu {neuer_besitzer.strip().lower()}."
+                                ),
+                            )
+
+                            st.success("Besitzer wurde geändert.")
+                            st.rerun()
+
+                if kann_verwalten:
                     st.divider()
 
                     with st.expander("Datensatz bearbeiten"):
@@ -661,10 +703,7 @@ else:
                             st.success("Änderungen wurden gespeichert.")
                             st.rerun()
 
-                if darf_admin or (
-                                                   rolle == "redakteur"
-                                                   and row.get("owner_email", "") == user_email
-):
+                if kann_verwalten:
                     st.divider()
 
                     with st.popover("🗑 Datensatz löschen"):
