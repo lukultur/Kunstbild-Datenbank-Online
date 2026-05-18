@@ -456,7 +456,10 @@ else:
                                 except Exception:
                                     st.info("Download aktuell nicht verfügbar.")
 
-                                if darf_loeschen:
+                                if darf_admin or (
+                                                                                              rolle == "redakteur"
+                                                                                              and row.get("owner_email", "") == user_email
+):
                                     st.divider()
 
                                     if st.button(
@@ -555,7 +558,10 @@ else:
                 st.write(f"**Beschreibung:** {row.get('beschreibung', '')}")
                 st.write(f"**Schlagworte:** {row.get('schlagworte', '')}")
 
-                if darf_bearbeiten:
+                if darf_admin or (
+  		    rolle == "redakteur"
+    		   and row.get("owner_email", "") == user_email
+):
                     st.divider()
 
                     with st.expander("Datensatz bearbeiten"):
@@ -655,7 +661,10 @@ else:
                             st.success("Änderungen wurden gespeichert.")
                             st.rerun()
 
-                if darf_loeschen:
+                if darf_admin or (
+                                                   rolle == "redakteur"
+                                                   and row.get("owner_email", "") == user_email
+)::
                     st.divider()
 
                     with st.popover("🗑 Datensatz löschen"):
