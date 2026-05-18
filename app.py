@@ -337,7 +337,7 @@ else:
     suchbegriff = st.sidebar.text_input("Freie Suche")
 
     kuenstler_liste = ["Alle"] + sorted(
-        df kuenstler"].astype(str).unique().tolist()
+        df["kuenstler"].astype(str).unique().tolist()
     )
 
     kuenstler_filter = st.sidebar.selectbox("Künstler", kuenstler_liste)
