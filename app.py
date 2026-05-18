@@ -321,9 +321,16 @@ elif st.session_state["seite"] == "Neues Bild hinzufügen" and darf_upload:
 else:
 
     df = daten_laden()
+    st.write(df[["deleted_at"]].head(20))
 
     if "deleted_at" in df.columns:
-        df = df[df["deleted_at"].isna()]
+    df = df[
+        df["deleted_at"].isna()
+        | (df["deleted_at"].astype(str).str.strip() == "")
+        | (df["deleted_at"].astype(str).str.lower() == "none")
+        | (df["deleted_at"].astype(str).str.lower() == "nan")
+        | (df["deleted_at"].astype(str).str.lower() == "nat")
+    ]
 
     st.sidebar.header("Filter")
 
