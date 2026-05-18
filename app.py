@@ -324,12 +324,12 @@ else:
     st.write(df[["deleted_at"]].head(20))
 
     if "deleted_at" in df.columns:
-    df = df[
-        df["deleted_at"].isna()
-        | (df["deleted_at"].astype(str).str.strip() == "")
-        | (df["deleted_at"].astype(str).str.lower() == "none")
-        | (df["deleted_at"].astype(str).str.lower() == "nan")
-        | (df["deleted_at"].astype(str).str.lower() == "nat")
+        df = df[
+            df["deleted_at"].isna()
+            | (df["deleted_at"].astype(str).str.strip() == "")
+            | (df["deleted_at"].astype(str).str.lower() == "none")
+            | (df["deleted_at"].astype(str).str.lower() == "nan")
+            | (df["deleted_at"].astype(str).str.lower() == "nat")
     ]
 
     st.sidebar.header("Filter")
@@ -337,7 +337,7 @@ else:
     suchbegriff = st.sidebar.text_input("Freie Suche")
 
     kuenstler_liste = ["Alle"] + sorted(
-        df["kuenstler"].astype(str).unique().tolist()
+        df kuenstler"].astype(str).unique().tolist()
     )
 
     kuenstler_filter = st.sidebar.selectbox("Künstler", kuenstler_liste)
