@@ -1,5 +1,6 @@
 import requests
 import streamlit as st
+from datetime import datetime, timezone
 
 from constants import (
     STIL_OPTIONEN,
@@ -13,7 +14,6 @@ from database import (
     daten_laden,
     datensatz_speichern,
     datensatz_aktualisieren,
-    datensatz_loeschen,
     excel_export_erzeugen,
 )
 
@@ -79,6 +79,26 @@ def darf_werk_verwalten(row, rolle, user_email):
         return str(row.get("owner_email", "")).lower() == str(user_email).lower()
 
     return False
+
+
+def soft_delete_werk(row, user_email, quelle):
+    deleted_at = datetime.now(timezone.utc).isoformat()
+
+    datensatz_aktualisieren(
+        row["id"],
+        {
+            "deleted_at": deleted_at,
+            "deleted_by": user_email,
+        },
+    )
+
+    log_activity(
+        user_email=user_email,
+        action="soft_delete",
+        artwork_id=int(row["id"]),
+        artwork_title=str(row.get("titel", "")),
+        details=f"Datensatz per Soft Delete aus {quelle} ausgeblendet.",
+    )
 
 
 rolle = get_current_role().lower()
@@ -268,6 +288,8 @@ elif st.session_state["seite"] == "Neues Bild hinzufügen" and darf_upload:
                     "standort": standort_neu,
                     "rechte": rechte_neu,
                     "owner_email": user_email,
+                    "deleted_at": None,
+                    "deleted_by": None,
                     "beschreibung": beschreibung_neu,
                     "schlagworte": schlagworte_neu,
                     "bildpfad": public_url,
@@ -299,6 +321,9 @@ elif st.session_state["seite"] == "Neues Bild hinzufügen" and darf_upload:
 else:
 
     df = daten_laden()
+
+    if "deleted_at" in df.columns:
+        df = df[df["deleted_at"].isna()]
 
     st.sidebar.header("Filter")
 
@@ -473,18 +498,10 @@ else:
                                         key=f"confirm_delete_gallery_{row['id']}",
                                         use_container_width=True,
                                     ):
-                                        log_activity(
+                                        soft_delete_werk(
+                                            row=row,
                                             user_email=user_email,
-                                            action="delete",
-                                            artwork_id=int(row["id"]),
-                                            artwork_title=str(row.get("titel", "")),
-                                            details="Datensatz aus Galerie gelöscht.",
-                                        )
-
-                                        datensatz_loeschen(
-                                            row["id"],
-                                            row["dateiname"],
-                                            row.get("thumbnailpfad", ""),
+                                            quelle="Galerie",
                                         )
 
                                         st.success("Datensatz wurde gelöscht.")
@@ -707,24 +724,16 @@ else:
                     st.divider()
 
                     with st.popover("🗑 Datensatz löschen"):
-                        st.warning("Diesen Datensatz wirklich endgültig löschen?")
+                        st.warning("Diesen Datensatz wirklich ausblenden?")
 
                         if st.button(
-                            "Ja, endgültig löschen",
+                            "Ja, Datensatz ausblenden",
                             key=f"confirm_delete_detail_{row['id']}",
                         ):
-                            log_activity(
+                            soft_delete_werk(
+                                row=row,
                                 user_email=user_email,
-                                action="delete",
-                                artwork_id=int(row["id"]),
-                                artwork_title=str(row.get("titel", "")),
-                                details="Datensatz aus Detailansicht gelöscht.",
-                            )
-
-                            datensatz_loeschen(
-                                row["id"],
-                                row["dateiname"],
-                                row.get("thumbnailpfad", ""),
+                                quelle="Detailansicht",
                             )
 
                             st.success("Datensatz wurde gelöscht.")
