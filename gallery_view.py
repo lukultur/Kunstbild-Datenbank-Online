@@ -59,20 +59,7 @@ def bild_loeschen(
     )
 def bild_anzeigen(bild_url):
     st.markdown(
-        f"""
-        <div style="
-            height:320px;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            overflow:hidden;
-            border-radius:12px;
-            background:#111827;
-            padding:10px;
-        ">
-            {bild_html(bild_url)}
-        </div>
-        """,
+        bild_html(bild_url),
         unsafe_allow_html=True,
     )
     
