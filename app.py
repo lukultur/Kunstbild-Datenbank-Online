@@ -33,7 +33,7 @@ from auth import (
 )
 
 from admin import admin_benutzerverwaltung
-from logging_utils import log_activity
+from activity import log_activity
 
 from permissions import (
     normalize_role,

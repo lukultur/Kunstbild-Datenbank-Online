@@ -4,7 +4,7 @@ import streamlit as st
 from supabase import create_client
 
 from database import datensatz_aktualisieren
-from logging_utils import log_activity
+from activity import log_activity
 
 
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
