@@ -33,9 +33,7 @@ from auth import (
 )
 
 from admin import admin_benutzerverwaltung
-from activity import (
-    log_activity,
-    log_download,
+from activity import log_activity
 )
 
 from filter_utils import (
@@ -318,12 +316,7 @@ else:
                                         key=f"download_{row['id']}",
                                         use_container_width=True,
                                     )
-                                                                                                if st.button(
-                                        "Download protokollieren",
-                                        key=f"log_download_gallery_{row['id']}",
-                                        use_container_width=True,
-                                    ):
-                                        log_download(user_email, row)
+                                                                                                
 
 
                                 except Exception:
@@ -405,18 +398,7 @@ else:
                         key=f"detail_download_{row['id']}",
                         use_container_width=True,
                     )
-                    if st.button(
-                                                              "Download protokollieren",
-                                                              key=f"log_download_detail_{row['id']}",
-                                                              use_container_width=True,
-):
-                                                              log_download(user_email, row)
-            if st.button(
-                                         "Download protokollieren",
-                                          key=f"log_download_detail_{row['id']}",
-):
-                                          log_download(user_email, row)
-
+                    
                 except Exception:
                     st.info("Download aktuell nicht verfügbar.")
 
