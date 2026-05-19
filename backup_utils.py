@@ -14,10 +14,10 @@ supabase_backup = create_client(
 )
 
 
-def komplette_kunstbilder_laden():
+def tabelle_laden(tabellenname):
     try:
         response = (
-            supabase_backup.table("kunstbilder")
+            supabase_backup.table(tabellenname)
             .select("*")
             .execute()
         )
@@ -25,25 +25,34 @@ def komplette_kunstbilder_laden():
         return response.data or []
 
     except Exception as error:
-        st.error(f"Kunstbilder konnten nicht geladen werden: {error}")
+        st.error(f"Tabelle {tabellenname} konnte nicht geladen werden: {error}")
         return []
 
 
 def backup_excel_erzeugen():
-    daten = komplette_kunstbilder_laden()
-
-    if not daten:
-        return None
-
-    df = pd.DataFrame(daten)
+    kunstbilder = tabelle_laden("kunstbilder")
+    activity_log = tabelle_laden("activity_log")
+    user_roles = tabelle_laden("user_roles")
 
     output = io.BytesIO()
 
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        df.to_excel(
+        pd.DataFrame(kunstbilder).to_excel(
             writer,
             index=False,
             sheet_name="kunstbilder_backup",
+        )
+
+        pd.DataFrame(activity_log).to_excel(
+            writer,
+            index=False,
+            sheet_name="activity_log_backup",
+        )
+
+        pd.DataFrame(user_roles).to_excel(
+            writer,
+            index=False,
+            sheet_name="user_roles_backup",
         )
 
     output.seek(0)
