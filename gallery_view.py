@@ -59,6 +59,40 @@ def bild_loeschen(
     )
 def bild_anzeigen(bild_url):
     st.markdown(
-    bild_html(bild_url),
-    unsafe_allow_html=True,
+        f"""
+        <div style="
+            height:320px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            overflow:hidden;
+            border-radius:12px;
+            background:#111827;
+            padding:10px;
+        ">
+            {bild_html(bild_url)}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    
+def bild_meta_block(row):
+    st.markdown(
+        f"""
+        <div style="
+            min-height:110px;
+            display:flex;
+            flex-direction:column;
+            justify-content:flex-start;
+        ">
+            <div class="kunst-title">
+                {bild_karte_titel(row)}
+            </div>
+            <div class="kunst-meta-kompakt">
+                <strong>{row.get("kuenstler", "")}</strong><br>
+                {row.get("jahr", "")}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )

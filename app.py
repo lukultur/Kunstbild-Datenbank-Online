@@ -50,6 +50,7 @@ from gallery_view import (
     bild_download_button,
     bild_download_laden,
     bild_anzeigen,
+    bild_meta_block,
 )
 
 from permissions import (
@@ -282,24 +283,7 @@ else:
 
                         bild_anzeigen(bild_url)
 
-                        st.markdown(
-                            f"""
-                            <div class="kunst-title">
-                                {bild_karte_titel(row)}
-                            </div>
-                            """,
-                            unsafe_allow_html=True,
-                        )
-
-                        st.markdown(
-                            f"""
-                            <div class="kunst-meta-kompakt">
-                                <strong>{row.get("kuenstler", "")}</strong><br>
-                                {row.get("jahr", "")}
-                            </div>
-                            """,
-                            unsafe_allow_html=True,
-                        )
+                        sbild_meta_block(row)
 
                         aktion1, aktion2 = st.columns([1, 1], gap="small")
 
