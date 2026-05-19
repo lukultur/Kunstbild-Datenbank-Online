@@ -34,7 +34,6 @@ from auth import (
 
 from admin import admin_benutzerverwaltung
 from activity import log_activity
-)
 
 from filter_utils import (
     text_zu_liste,
