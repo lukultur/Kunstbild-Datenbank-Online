@@ -1,6 +1,5 @@
 import requests
 import streamlit as st
-from datetime import datetime, timezone
 
 from constants import (
     STIL_OPTIONEN,
@@ -43,6 +42,7 @@ from permissions import (
     can_manage_artwork,
 )
 
+from trash import soft_delete_werk
 
 st.set_page_config(
     page_title="Kunstbild-Datenbank",
@@ -78,24 +78,6 @@ def filter_optionen(werte, optionen):
     return [wert for wert in werte if wert in optionen]
 
 
-def soft_delete_werk(row, user_email, quelle):
-    deleted_at = datetime.now(timezone.utc).isoformat()
-
-    datensatz_aktualisieren(
-        row["id"],
-        {
-            "deleted_at": deleted_at,
-            "deleted_by": user_email,
-        },
-    )
-
-    log_activity(
-        user_email=user_email,
-        action="soft_delete",
-        artwork_id=int(row["id"]),
-        artwork_title=str(row.get("titel", "")),
-        details=f"Datensatz per Soft Delete aus {quelle} ausgeblendet.",
-    )
 
 
 rolle = normalize_role(get_current_role())
@@ -156,7 +138,10 @@ with st.sidebar:
 
 if st.session_state["seite"] == "Benutzerverwaltung" and darf_admin:
 
-    admin_benutzerverwaltung()
+    admin_benutzerverwaltung(
+    rolle=rolle,
+    user_email=user_email,
+)
 
 
 elif st.session_state["seite"] == "Neues Bild hinzufügen" and darf_upload:
