@@ -47,6 +47,7 @@ from gallery_view import (
     bild_karte_titel,
     darf_bearbeiten,
     bild_loeschen,
+    bild_download_button,
 )
 
 from permissions import (
@@ -322,14 +323,10 @@ else:
                                         timeout=20,
                                     ).content
 
-                                    st.download_button(
-                                        label="⬇ Bild herunterladen",
-                                        data=bild_download,
-                                        file_name=str(row["dateiname"]),
-                                        mime="application/octet-stream",
-                                        key=f"download_{row['id']}",
-                                        use_container_width=True,
-                                    )
+                                    bild_download_button(
+                                                                                                           row,
+                                                                                                           bild_download,
+)
                                                                                                 
 
 
