@@ -1,0 +1,42 @@
+import requests
+import streamlit as st
+
+from storage import bild_html
+from trash import soft_delete_werk
+from permissions import can_manage_artwork
+from filter_utils import kurzer_titel
+from activity import log_activity
+
+def detail_bild_download_laden(bildpfad):
+    try:
+        return requests.get(
+            bildpfad,
+            timeout=20,
+        ).content
+
+    except Exception:
+        return None
+
+def detail_download_button(
+    row,
+    bild_download,
+):
+    st.download_button(
+        label="Bild herunterladen",
+        data=bild_download,
+        file_name=str(row["dateiname"]),
+        mime="application/octet-stream",
+        key=f"detail_download_{row['id']}",
+        use_container_width=True,
+    )
+
+def detail_darf_bearbeiten(
+    row,
+    rolle,
+    user_email,
+):
+    return can_manage_artwork(
+        row,
+        rolle,
+        user_email,
+    )
