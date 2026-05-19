@@ -4,6 +4,7 @@ from supabase import create_client
 
 from trash import geloeschte_werke_laden, werk_wiederherstellen
 from activity import aktivitaeten_laden
+from backup_utils import backup_excel_erzeugen
 
 
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
@@ -128,6 +129,20 @@ def papierkorb_ansicht(rolle, user_email):
 
 def admin_benutzerverwaltung(rolle="admin", user_email=""):
     st.header("Administration")
+    st.divider()
+
+    backup_datei = backup_excel_erzeugen()
+
+    if backup_datei:
+        st.download_button(
+            label="Komplettes System-Backup herunterladen",
+            data=backup_datei,
+            file_name="kunstbilder_komplett_backup.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+        )
+
+    st.divider()
 
     if rolle == "admin":
         tab_rollen, tab_log, tab_papierkorb = st.tabs(
