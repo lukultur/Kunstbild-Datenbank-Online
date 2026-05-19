@@ -126,11 +126,17 @@ with st.sidebar:
 if st.session_state["seite"] == "Benutzerverwaltung" and darf_admin:
 
     admin_benutzerverwaltung(
-    rolle=rolle,
-    user_email=user_email,
-)
+        rolle=rolle,
+        user_email=user_email,
+    )
 
 
+elif st.session_state["seite"] == "Neues Bild hinzufügen" and darf_upload:
+
+    upload_view(user_email)
+
+
+else:
 
     df = daten_laden()
     
