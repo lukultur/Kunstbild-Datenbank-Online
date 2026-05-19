@@ -48,3 +48,11 @@ def aktivitaeten_laden():
     except Exception as error:
         st.error(f"Aktivitäten konnten nicht geladen werden: {error}")
         return []
+def log_download(user_email, row):
+    log_activity(
+        user_email=user_email,
+        action="download",
+        artwork_id=int(row["id"]),
+        artwork_title=str(row.get("titel", "")),
+        details=f"Download von {row.get('dateiname', '')}",
+    )
