@@ -48,6 +48,7 @@ from gallery_view import (
     darf_bearbeiten,
     bild_loeschen,
     bild_download_button,
+    bild_download_laden,
 )
 
 from permissions import (
@@ -395,10 +396,9 @@ else:
                 st.image(row["bildpfad"], use_container_width=True)
 
                 try:
-                    bild_download = requests.get(
-                        row["bildpfad"],
-                        timeout=20,
-                    ).content
+                    bild_download = bild_download_laden(
+                                                                row["bildpfad"]
+)
 
                     st.download_button(
                         label="Bild herunterladen",
