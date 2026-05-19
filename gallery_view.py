@@ -57,3 +57,8 @@ def bild_loeschen(
         user_email,
         "Galerieansicht",
     )
+def bild_anzeigen(bild_url):
+    st.markdown(
+    bild_html(bild_url),
+    unsafe_allow_html=True,
+    )

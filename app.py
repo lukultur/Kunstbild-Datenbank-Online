@@ -49,6 +49,7 @@ from gallery_view import (
     bild_loeschen,
     bild_download_button,
     bild_download_laden,
+    bild_anzeigen,
 )
 
 from permissions import (
@@ -279,10 +280,7 @@ else:
                 with spalten[i]:
                     with st.container(border=True):
 
-                        st.markdown(
-                            bild_html(bild_url),
-                            unsafe_allow_html=True,
-                        )
+                        bild_anzeigen(bild_url)
 
                         st.markdown(
                             f"""
