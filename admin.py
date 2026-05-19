@@ -3,6 +3,7 @@ import streamlit as st
 from supabase import create_client
 
 from trash import geloeschte_werke_laden, werk_wiederherstellen
+from activity import aktivitaeten_laden
 
 
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
@@ -78,22 +79,6 @@ def rolle_loeschen(email):
 
     except Exception as error:
         return False, f"Rolle konnte nicht entfernt werden: {error}"
-
-
-def aktivitaeten_laden():
-    try:
-        response = (
-            supabase_admin.table("activity_log")
-            .select("*")
-            .order("created_at", desc=True)
-            .limit(300)
-            .execute()
-        )
-        return response.data or []
-
-    except Exception as error:
-        st.error(f"Aktivitäten konnten nicht geladen werden: {error}")
-        return []
 
 
 def papierkorb_ansicht(rolle, user_email):
