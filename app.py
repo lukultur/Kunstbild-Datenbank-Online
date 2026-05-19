@@ -283,7 +283,7 @@ else:
 
                         bild_anzeigen(bild_url)
 
-                        sbild_meta_block(row)
+                        bild_meta_block(row)
 
                         aktion1, aktion2 = st.columns([1, 1], gap="small")
 
