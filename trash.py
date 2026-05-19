@@ -37,21 +37,27 @@ def soft_delete_werk(row, user_email, quelle):
 
 
 def werk_wiederherstellen(werk, user_email):
-    datensatz_aktualisieren(
-        werk["id"],
-        {
-            "deleted_at": None,
-            "deleted_by": None,
-        },
-    )
+    try:
+        datensatz_aktualisieren(
+            werk["id"],
+            {
+                "deleted_at": None,
+                "deleted_by": None,
+            },
+        )
 
-    log_activity(
-        user_email=user_email,
-        action="restore",
-        artwork_id=int(werk["id"]),
-        artwork_title=str(werk.get("titel", "")),
-        details="Datensatz aus dem Papierkorb wiederhergestellt.",
-    )
+        log_activity(
+            user_email=user_email,
+            action="restore",
+            artwork_id=int(werk["id"]),
+            artwork_title=str(werk.get("titel", "")),
+            details="Datensatz aus dem Papierkorb wiederhergestellt.",
+        )
+
+        return True, "Werk wurde wiederhergestellt."
+
+    except Exception as error:
+        return False, f"Werk konnte nicht wiederhergestellt werden: {error}"
 
 def geloeschte_werke_laden(rolle, user_email):
     try:
