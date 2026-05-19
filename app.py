@@ -348,9 +348,7 @@ else:
     row,
     user_email,
 )
-                                            quelle="Galerie",
-                                        )
-
+                                            
                                         st.success("Datensatz wurde gelöscht.")
                                         st.rerun()
 
