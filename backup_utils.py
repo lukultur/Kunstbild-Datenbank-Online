@@ -29,10 +29,57 @@ def tabelle_laden(tabellenname):
         return []
 
 
+def vollstaendige_rollenliste_erzeugen(kunstbilder, activity_log, user_roles):
+    rollen_map = {}
+
+    for eintrag in user_roles:
+        email = str(eintrag.get("email", "")).strip().lower()
+        rolle = str(eintrag.get("role", "nutzer")).strip().lower()
+
+        if email:
+            rollen_map[email] = rolle
+
+    emails = set(rollen_map.keys())
+
+    for werk in kunstbilder:
+        owner_email = str(werk.get("owner_email", "")).strip().lower()
+        deleted_by = str(werk.get("deleted_by", "")).strip().lower()
+
+        if owner_email:
+            emails.add(owner_email)
+
+        if deleted_by:
+            emails.add(deleted_by)
+
+    for aktivitaet in activity_log:
+        user_email = str(aktivitaet.get("user_email", "")).strip().lower()
+
+        if user_email:
+            emails.add(user_email)
+
+    vollstaendige_liste = []
+
+    for email in sorted(emails):
+        vollstaendige_liste.append(
+            {
+                "email": email,
+                "role": rollen_map.get(email, "nutzer"),
+            }
+        )
+
+    return vollstaendige_liste
+
+
 def backup_excel_erzeugen():
     kunstbilder = tabelle_laden("kunstbilder")
     activity_log = tabelle_laden("activity_log")
     user_roles = tabelle_laden("user_roles")
+
+    vollstaendige_user_roles = vollstaendige_rollenliste_erzeugen(
+        kunstbilder,
+        activity_log,
+        user_roles,
+    )
 
     output = io.BytesIO()
 
@@ -49,7 +96,7 @@ def backup_excel_erzeugen():
             sheet_name="activity_log_backup",
         )
 
-        pd.DataFrame(user_roles).to_excel(
+        pd.DataFrame(vollstaendige_user_roles).to_excel(
             writer,
             index=False,
             sheet_name="user_roles_backup",
