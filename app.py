@@ -405,12 +405,12 @@ else:
                         key=f"detail_download_{row['id']}",
                         use_container_width=True,
                     )
-            if st.button(
-                                         "Download protokollieren",
-                                         key=f"log_download_detail_{row['id']}",
-                                         use_container_width=True,
+                    if st.button(
+                                                              "Download protokollieren",
+                                                              key=f"log_download_detail_{row['id']}",
+                                                              use_container_width=True,
 ):
-                                         log_download(user_email, row)
+                                                              log_download(user_email, row)
             if st.button(
                                          "Download protokollieren",
                                           key=f"log_download_detail_{row['id']}",
