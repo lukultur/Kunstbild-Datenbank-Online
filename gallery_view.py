@@ -64,21 +64,23 @@ def bild_anzeigen(bild_url):
     )
     
 def bild_meta_block(row):
+    kuenstler = str(row.get("kuenstler", "") or "").strip()
+    jahr = str(row.get("jahr", "") or "").strip()
+
+    if kuenstler.lower() in ["empty", "none", "nan", "nat"]:
+        kuenstler = ""
+
+    if jahr.lower() in ["empty", "none", "nan", "nat"]:
+        jahr = ""
+
     st.markdown(
         f"""
-        <div style="
-            min-height:110px;
-            display:flex;
-            flex-direction:column;
-            justify-content:flex-start;
-        ">
-            <div class="kunst-title">
-                {bild_karte_titel(row)}
-            </div>
-            <div class="kunst-meta-kompakt">
-                <strong>{row.get("kuenstler", "")}</strong><br>
-                {row.get("jahr", "")}
-            </div>
+        <div class="kunst-title">
+            {bild_karte_titel(row)}
+        </div>
+        <div class="kunst-meta-kompakt">
+            <strong>{kuenstler}</strong><br>
+            {jahr}
         </div>
         """,
         unsafe_allow_html=True,
