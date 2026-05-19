@@ -43,6 +43,7 @@ from filter_utils import (
 )
 
 from upload_view import upload_view
+from gallery_view import bild_karte_titel
 
 from permissions import (
     normalize_role,
@@ -270,7 +271,7 @@ else:
                         st.markdown(
                             f"""
                             <div class="kunst-title">
-                                {kurzer_titel(row.get("titel", ""))}
+                                {bild_karte_titel(row)}
                             </div>
                             """,
                             unsafe_allow_html=True,
