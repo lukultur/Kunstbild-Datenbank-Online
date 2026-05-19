@@ -32,7 +32,7 @@ from auth import (
     get_current_role,
 )
 
-from admin import admin_benutzerverwaltung
+from admin import admin_benutzerverwaltung, papierkorb_ansicht
 from activity import log_activity
 
 from filter_utils import (
@@ -46,6 +46,7 @@ from upload_view import upload_view
 from gallery_view import (
     bild_karte_titel,
     darf_bearbeiten,
+    bild_loeschen,
 )
 
 from permissions import (
@@ -107,6 +108,9 @@ with st.sidebar:
     if darf_upload:
         bereiche.append("Neues Bild hinzufügen")
 
+    if rolle in ["admin", "redakteur"]:
+        bereiche.append("Papierkorb")    
+
     if darf_admin:
         bereiche.append("Benutzerverwaltung")
 
@@ -127,8 +131,15 @@ with st.sidebar:
         logout()
         st.rerun()
 
+if st.session_state["seite"] == "Papierkorb" and rolle in ["admin", "redakteur"]:
 
-if st.session_state["seite"] == "Benutzerverwaltung" and darf_admin:
+    papierkorb_ansicht(
+        rolle=rolle,
+        user_email=user_email,
+    )
+
+
+elif st.session_state["seite"] == "Benutzerverwaltung" and darf_admin:
 
     admin_benutzerverwaltung(
         rolle=rolle,
@@ -333,9 +344,10 @@ else:
                                         key=f"confirm_delete_gallery_{row['id']}",
                                         use_container_width=True,
                                     ):
-                                        soft_delete_werk(
-                                            row=row,
-                                            user_email=user_email,
+                                        bild_loeschen(
+    row,
+    user_email,
+)
                                             quelle="Galerie",
                                         )
 
