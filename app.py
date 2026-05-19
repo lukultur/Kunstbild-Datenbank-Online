@@ -36,6 +36,13 @@ from auth import (
 from admin import admin_benutzerverwaltung
 from logging_utils import log_activity
 
+from permissions import (
+    normalize_role,
+    is_admin,
+    can_upload,
+    can_manage_artwork,
+)
+
 
 st.set_page_config(
     page_title="Kunstbild-Datenbank",
@@ -71,16 +78,6 @@ def filter_optionen(werte, optionen):
     return [wert for wert in werte if wert in optionen]
 
 
-def darf_werk_verwalten(row, rolle, user_email):
-    if rolle == "admin":
-        return True
-
-    if rolle == "redakteur":
-        return str(row.get("owner_email", "")).lower() == str(user_email).lower()
-
-    return False
-
-
 def soft_delete_werk(row, user_email, quelle):
     deleted_at = datetime.now(timezone.utc).isoformat()
 
@@ -101,11 +98,11 @@ def soft_delete_werk(row, user_email, quelle):
     )
 
 
-rolle = get_current_role().lower()
+rolle = normalize_role(get_current_role())
 user_email = get_current_email()
 
-darf_admin = rolle == "admin"
-darf_upload = rolle in ["admin", "redakteur"]
+darf_admin = is_admin(rolle)
+darf_upload = can_upload(rolle)
 
 
 if "seite" not in st.session_state:
@@ -428,7 +425,11 @@ else:
                     continue
 
                 row = gefiltert.iloc[start + i]
-                kann_verwalten = darf_werk_verwalten(row, rolle, user_email)
+                kann_verwalten = can_manage_artwork(
+                    row,
+                    rolle,
+                    user_email,
+)
 
                 bild_url = (
                     row["thumbnailpfad"]
@@ -542,7 +543,11 @@ else:
 
             index = auswahl_liste.index(auswahl)
             row = gefiltert.iloc[index]
-            kann_verwalten = darf_werk_verwalten(row, rolle, user_email)
+            kann_verwalten = can_manage_artwork(
+                                          row,
+                                          rolle,
+                                          user_email,
+)
 
             if st.button("← Zurück zur Galerie"):
                 st.session_state["ansicht"] = "Galerieansicht"

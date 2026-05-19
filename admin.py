@@ -2,6 +2,9 @@ import pandas as pd
 import streamlit as st
 from supabase import create_client
 
+from database import datensatz_aktualisieren
+from logging_utils import log_activity
+
 
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
@@ -53,12 +56,7 @@ def rolle_speichern(email, rolle):
         else:
             (
                 supabase_admin.table("user_roles")
-                .insert(
-                    {
-                        "email": email,
-                        "role": rolle,
-                    }
-                )
+                .insert({"email": email, "role": rolle})
                 .execute()
             )
 
@@ -99,41 +97,86 @@ def aktivitaeten_laden():
         return []
 
 
-def admin_benutzerverwaltung():
-    st.header("Administration")
-
-    tab_rollen, tab_log = st.tabs(
-        [
-            "Benutzerrollen",
-            "Aktivitätsprotokoll",
-        ]
-    )
-
-    with tab_rollen:
-        st.subheader("Benutzerrollen")
-
-        st.caption(
-            "Hier werden Sonderrollen verwaltet. Nutzer ohne Eintrag haben automatisch die Rolle „nutzer“."
+def geloeschte_werke_laden(rolle, user_email):
+    try:
+        query = (
+            supabase_admin.table("kunstbilder")
+            .select("*")
+            .not_.is_("deleted_at", "null")
+            .order("deleted_at", desc=True)
         )
 
-        with st.form("rolle_formular"):
-            email = st.text_input("E-Mail-Adresse")
+        if rolle == "redakteur":
+            query = query.eq("owner_email", user_email)
 
-            rolle = st.selectbox(
-                "Rolle",
-                ROLLEN,
-                index=0,
-            )
+        response = query.execute()
+        return response.data or []
 
-            speichern = st.form_submit_button("Rolle speichern")
+    except Exception as error:
+        st.error(f"Gelöschte Werke konnten nicht geladen werden: {error}")
+        return []
 
-        if speichern:
-            if not email.strip():
-                st.error("Bitte eine E-Mail-Adresse eingeben.")
-            else:
-                success, message = rolle_speichern(
-                    email.strip().lower(),
-                    rolle.strip().lower(),
+
+def werk_wiederherstellen(werk, user_email):
+    try:
+        datensatz_aktualisieren(
+            werk["id"],
+            {
+                "deleted_at": None,
+                "deleted_by": None,
+            },
+        )
+
+        log_activity(
+            user_email=user_email,
+            action="restore",
+            artwork_id=int(werk["id"]),
+            artwork_title=str(werk.get("titel", "")),
+            details="Datensatz aus dem Papierkorb wiederhergestellt.",
+        )
+
+        return True, "Werk wurde wiederhergestellt."
+
+    except Exception as error:
+        return False, f"Werk konnte nicht wiederhergestellt werden: {error}"
+
+
+def papierkorb_ansicht(rolle, user_email):
+    st.subheader("Papierkorb")
+
+    if rolle == "admin":
+        st.caption("Admin sieht alle gelöschten Werke.")
+    else:
+        st.caption("Redakteure sehen nur eigene gelöschte Werke.")
+
+    werke = geloeschte_werke_laden(rolle, user_email)
+
+    if not werke:
+        st.info("Keine gelöschten Werke vorhanden.")
+        return
+
+    for werk in werke:
+        titel = werk.get("titel", "")
+        kuenstler = werk.get("kuenstler", "")
+        owner = werk.get("owner_email", "")
+        deleted_by = werk.get("deleted_by", "")
+        deleted_at = werk.get("deleted_at", "")
+
+        with st.container(border=True):
+            st.write(f"**{titel}**")
+            st.write(f"Künstler: {kuenstler}")
+            st.write(f"Besitzer: {owner}")
+            st.write(f"Gelöscht von: {deleted_by}")
+            st.write(f"Gelöscht am: {deleted_at}")
+
+            if st.button(
+                "Wiederherstellen",
+                key=f"restore_{werk['id']}",
+                use_container_width=True,
+            ):
+                success, message = werk_wiederherstellen(
+                    werk,
+                    user_email,
                 )
 
                 if success:
@@ -142,123 +185,176 @@ def admin_benutzerverwaltung():
                 else:
                     st.error(message)
 
-        st.divider()
 
-        st.subheader("Aktuelle Sonderrollen")
+def admin_benutzerverwaltung(rolle="admin", user_email=""):
+    st.header("Administration")
 
-        rollen = rollen_laden()
-
-        if not rollen:
-            st.info("Noch keine Sonderrollen vorhanden.")
-        else:
-            for eintrag in rollen:
-                email = eintrag.get("email", "")
-                rolle = eintrag.get("role", "")
-
-                col1, col2, col3 = st.columns([3, 1, 1])
-
-                with col1:
-                    st.write(f"**{email}**")
-
-                with col2:
-                    st.write(rolle)
-
-                with col3:
-                    if st.button(
-                        "Entfernen",
-                        key=f"rolle_entfernen_{email}",
-                    ):
-                        success, message = rolle_loeschen(email)
-
-                        if success:
-                            st.success(message)
-                            st.rerun()
-                        else:
-                            st.error(message)
-
-    with tab_log:
-        st.subheader("Aktivitätsprotokoll")
-
-        st.caption(
-            "Die letzten 300 protokollierten Aktionen im System."
+    if rolle == "admin":
+        tab_rollen, tab_log, tab_papierkorb = st.tabs(
+            [
+                "Benutzerrollen",
+                "Aktivitätsprotokoll",
+                "Papierkorb",
+            ]
         )
+    else:
+        tab_papierkorb = st.tabs(["Papierkorb"])[0]
 
-        aktivitaeten = aktivitaeten_laden()
+    if rolle == "admin":
+        with tab_rollen:
+            st.subheader("Benutzerrollen")
 
-        if not aktivitaeten:
-            st.info("Noch keine Aktivitäten vorhanden.")
-            return
-
-        df = pd.DataFrame(aktivitaeten)
-
-        if "created_at" in df.columns:
-            df["created_at"] = pd.to_datetime(
-                df["created_at"],
-                errors="coerce",
+            st.caption(
+                "Hier werden Sonderrollen verwaltet. Nutzer ohne Eintrag haben automatisch die Rolle „nutzer“."
             )
 
-        nutzer_filter = "Alle"
-        aktion_filter = "Alle"
+            with st.form("rolle_formular"):
+                email = st.text_input("E-Mail-Adresse")
 
-        col_filter1, col_filter2 = st.columns([1, 1])
-
-        with col_filter1:
-            if "user_email" in df.columns:
-                nutzer = sorted(
-                    df["user_email"]
-                    .fillna("")
-                    .astype(str)
-                    .unique()
-                    .tolist()
+                rolle_neu = st.selectbox(
+                    "Rolle",
+                    ROLLEN,
+                    index=0,
                 )
 
-                nutzer_filter = st.selectbox(
-                    "Nutzer filtern",
-                    ["Alle"] + nutzer,
+                speichern = st.form_submit_button("Rolle speichern")
+
+            if speichern:
+                if not email.strip():
+                    st.error("Bitte eine E-Mail-Adresse eingeben.")
+                else:
+                    success, message = rolle_speichern(
+                        email.strip().lower(),
+                        rolle_neu.strip().lower(),
+                    )
+
+                    if success:
+                        st.success(message)
+                        st.rerun()
+                    else:
+                        st.error(message)
+
+            st.divider()
+
+            st.subheader("Aktuelle Sonderrollen")
+
+            rollen = rollen_laden()
+
+            if not rollen:
+                st.info("Noch keine Sonderrollen vorhanden.")
+            else:
+                for eintrag in rollen:
+                    email = eintrag.get("email", "")
+                    rolle_eintrag = eintrag.get("role", "")
+
+                    col1, col2, col3 = st.columns([3, 1, 1])
+
+                    with col1:
+                        st.write(f"**{email}**")
+
+                    with col2:
+                        st.write(rolle_eintrag)
+
+                    with col3:
+                        if st.button(
+                            "Entfernen",
+                            key=f"rolle_entfernen_{email}",
+                        ):
+                            success, message = rolle_loeschen(email)
+
+                            if success:
+                                st.success(message)
+                                st.rerun()
+                            else:
+                                st.error(message)
+
+        with tab_log:
+            st.subheader("Aktivitätsprotokoll")
+
+            st.caption("Die letzten 300 protokollierten Aktionen im System.")
+
+            aktivitaeten = aktivitaeten_laden()
+
+            if not aktivitaeten:
+                st.info("Noch keine Aktivitäten vorhanden.")
+            else:
+                df = pd.DataFrame(aktivitaeten)
+
+                if "created_at" in df.columns:
+                    df["created_at"] = pd.to_datetime(
+                        df["created_at"],
+                        errors="coerce",
+                    )
+
+                nutzer_filter = "Alle"
+                aktion_filter = "Alle"
+
+                col_filter1, col_filter2 = st.columns([1, 1])
+
+                with col_filter1:
+                    if "user_email" in df.columns:
+                        nutzer = sorted(
+                            df["user_email"]
+                            .fillna("")
+                            .astype(str)
+                            .unique()
+                            .tolist()
+                        )
+
+                        nutzer_filter = st.selectbox(
+                            "Nutzer filtern",
+                            ["Alle"] + nutzer,
+                        )
+
+                with col_filter2:
+                    if "action" in df.columns:
+                        aktionen = sorted(
+                            df["action"]
+                            .fillna("")
+                            .astype(str)
+                            .unique()
+                            .tolist()
+                        )
+
+                        aktion_filter = st.selectbox(
+                            "Aktion filtern",
+                            ["Alle"] + aktionen,
+                        )
+
+                gefiltert = df.copy()
+
+                if nutzer_filter != "Alle" and "user_email" in gefiltert.columns:
+                    gefiltert = gefiltert[
+                        gefiltert["user_email"].astype(str) == nutzer_filter
+                    ]
+
+                if aktion_filter != "Alle" and "action" in gefiltert.columns:
+                    gefiltert = gefiltert[
+                        gefiltert["action"].astype(str) == aktion_filter
+                    ]
+
+                spalten = [
+                    "created_at",
+                    "user_email",
+                    "action",
+                    "artwork_title",
+                    "artwork_id",
+                    "details",
+                ]
+
+                vorhandene_spalten = [
+                    spalte for spalte in spalten if spalte in gefiltert.columns
+                ]
+
+                st.dataframe(
+                    gefiltert[vorhandene_spalten],
+                    use_container_width=True,
+                    hide_index=True,
                 )
 
-        with col_filter2:
-            if "action" in df.columns:
-                aktionen = sorted(
-                    df["action"]
-                    .fillna("")
-                    .astype(str)
-                    .unique()
-                    .tolist()
-                )
+        with tab_papierkorb:
+            papierkorb_ansicht(rolle, user_email)
 
-                aktion_filter = st.selectbox(
-                    "Aktion filtern",
-                    ["Alle"] + aktionen,
-                )
-
-        gefiltert = df.copy()
-
-        if nutzer_filter != "Alle" and "user_email" in gefiltert.columns:
-            gefiltert = gefiltert[
-                gefiltert["user_email"].astype(str) == nutzer_filter
-            ]
-
-        if aktion_filter != "Alle" and "action" in gefiltert.columns:
-            gefiltert = gefiltert[
-                gefiltert["action"].astype(str) == aktion_filter
-            ]
-
-        spalten = [
-            "created_at",
-            "user_email",
-            "action",
-            "artwork_title",
-            "artwork_id",
-            "details",
-        ]
-
-        vorhandene_spalten = [
-            spalte for spalte in spalten if spalte in gefiltert.columns
-        ]
-
-        st.dataframe(
-            gefiltert[vorhandene_spalten],
-            use_container_width=True,
-            hide_index=True,
-        )
+    else:
+        with tab_papierkorb:
+            papierkorb_ansicht(rolle, user_email)
