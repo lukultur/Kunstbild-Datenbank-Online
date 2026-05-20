@@ -79,3 +79,7 @@ def detail_bild_loeschen(
     row,
     user_email,
 )
+
+def detail_bild_anzeigen(bild_url):
+    detail_bild_anzeigen(bild_url)
+    )

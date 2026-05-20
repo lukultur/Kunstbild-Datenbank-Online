@@ -59,6 +59,7 @@ from detail_view import (
     detail_darf_bearbeiten,
     detail_meta_block,
     detail_bild_loeschen,
+    detail_bild_anzeigen,
 )
 
 from permissions import (
