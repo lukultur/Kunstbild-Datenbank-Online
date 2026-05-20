@@ -262,7 +262,7 @@ else:
             spalten = st.columns(3)
 
             for i in range(3):
-            if start + i >= len(gefiltert):
+                if start + i >= len(gefiltert):
                 continue
 
             row = gefiltert.iloc[start + i]
