@@ -265,22 +265,22 @@ else:
                 if start + i >= len(gefiltert):
                     continue
 
-            row = gefiltert.iloc[start + i]
+                row = gefiltert.iloc[start + i]
 
-            kann_verwalten = darf_bearbeiten(
-                row,
-                rolle,
-                user_email,
-            )
+                kann_verwalten = darf_bearbeiten(
+                    row,
+                    rolle,
+                    user_email,
+                )
 
-            bild_url = (
-                row["thumbnailpfad"]
-                if row["thumbnailpfad"]
-                else row["bildpfad"]
-            )
+                bild_url = (
+                    row["thumbnailpfad"]
+                    if row["thumbnailpfad"]
+                    else row["bildpfad"]
+                )
 
-            with spalten[i]:
-                with st.container(border=True):
+                with spalten[i]:
+                    with st.container(border=True):
 
                     bild_anzeigen(bild_url)
 
