@@ -259,7 +259,7 @@ else:
     if ansicht == "Galerieansicht":
 
         for start in range(0, len(gefiltert), 3):
-        spalten = st.columns(3)
+            spalten = st.columns(3)
 
         for i in range(3):
             if start + i >= len(gefiltert):
