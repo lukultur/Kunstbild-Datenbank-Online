@@ -282,9 +282,9 @@ else:
                 with spalten[i]:
                     with st.container(border=True):
 
-                    bild_anzeigen(bild_url)
+                        bild_anzeigen(bild_url)
 
-                    bild_meta_block(row)
+                        bild_meta_block(row)
 
                     aktion1, aktion2 = st.columns([1, 1], gap="small")
 
