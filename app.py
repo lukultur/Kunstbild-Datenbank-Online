@@ -263,7 +263,7 @@ else:
 
             for i in range(3):
                 if start + i >= len(gefiltert):
-                continue
+                    continue
 
             row = gefiltert.iloc[start + i]
 
