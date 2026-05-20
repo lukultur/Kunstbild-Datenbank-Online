@@ -258,79 +258,77 @@ else:
 
     if ansicht == "Galerieansicht":
 
-        for start in range(0, len(gefiltert), 3):
-            spalten = st.columns(3)
+    for start in range(0, len(gefiltert), 3):
+        spalten = st.columns(3)
 
-            for i in range(3):
-                if start + i >= len(gefiltert):
-                    continue
+        for i in range(3):
+            if start + i >= len(gefiltert):
+                continue
 
-                row = gefiltert.iloc[start + i]
-                kann_verwalten = darf_bearbeiten(
-                    row,
-                    rolle,
-                    user_email,
-)
+            row = gefiltert.iloc[start + i]
 
-                bild_url = (
-                    row["thumbnailpfad"]
-                    if row["thumbnailpfad"]
-                    else row["bildpfad"]
-                )
+            kann_verwalten = darf_bearbeiten(
+                row,
+                rolle,
+                user_email,
+            )
 
-                with spalten[i]:
-                    with st.container(border=True):
+            bild_url = (
+                row["thumbnailpfad"]
+                if row["thumbnailpfad"]
+                else row["bildpfad"]
+            )
 
-                        bild_anzeigen(bild_url)
+            with spalten[i]:
+                with st.container(border=True):
 
-                        bild_meta_block(row)
+                    bild_anzeigen(bild_url)
 
-                        aktion1, aktion2 = st.columns([1, 1], gap="small")
+                    bild_meta_block(row)
 
-                        with aktion1:
-                            if st.button(
-                                "⛶",
-                                key=f"gross_{row['id']}",
-                                help="Detailansicht öffnen",
-                                use_container_width=True,
-                            ):
-                                st.session_state["ausgewaehlte_id"] = int(row["id"])
-                                st.session_state["ansicht"] = "Detailansicht"
-                                st.rerun()
+                    aktion1, aktion2 = st.columns([1, 1], gap="small")
 
-                        with aktion2:
-                            with st.popover("⋯", use_container_width=True):
-                                try:
-                                    bild_download = requests.get(
-                                        row["bildpfad"],
-                                        timeout=20,
-                                    ).content
+                    with aktion1:
+                        if st.button(
+                            "⛶",
+                            key=f"gross_{row['id']}",
+                            help="Detailansicht öffnen",
+                            use_container_width=True,
+                        ):
+                            st.session_state["ausgewaehlte_id"] = int(row["id"])
+                            st.session_state["ansicht"] = "Detailansicht"
+                            st.rerun()
 
-                                    bild_download_button(
-                                                                                                           row,
-                                                                                                           bild_download,
-)
-                                                                                                
+                    with aktion2:
+                        with st.popover("⋯", use_container_width=True):
+                            try:
+                                bild_download = bild_download_laden(
+                                    row["bildpfad"]
+                                )
 
+                                bild_download_button(
+                                    row,
+                                    bild_download,
+                                )
 
-                                except Exception:
-                                    st.info("Download aktuell nicht verfügbar.")
+                            except Exception:
+                                st.info("Download aktuell nicht verfügbar.")
 
-                                if kann_verwalten:
-                                    st.divider()
+                            if kann_verwalten:
+                                st.divider()
 
-                                    if st.button(
-                                        "🗑 Datensatz löschen",
-                                        key=f"confirm_delete_gallery_{row['id']}",
-                                        use_container_width=True,
-                                    ):
-                                        bild_loeschen(
-    row,
-    user_email,
-)
-                                            
-                                        st.success("Datensatz wurde gelöscht.")
-                                        st.rerun()
+                                if st.button(
+                                    "🗑 Datensatz löschen",
+                                    key=f"confirm_delete_gallery_{row['id']}",
+                                    use_container_width=True,
+                                ):
+                                    bild_loeschen(
+                                        row,
+                                        user_email,
+                                    )
+
+                                    st.success("Datensatz wurde gelöscht.")
+                                    st.rerun()
 
     else:
 
