@@ -57,7 +57,8 @@ from detail_view import (
     detail_download_button,
     detail_bild_download_laden,
     detail_darf_bearbeiten,
-detail_meta_block,
+    detail_meta_block,
+    detail_bild_loeschen,
 )
 
 from permissions import (

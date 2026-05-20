@@ -1,6 +1,7 @@
 import requests
 import streamlit as st
 
+from gallery_view import bild_loeschen
 from storage import bild_html
 from trash import soft_delete_werk
 from permissions import can_manage_artwork
@@ -69,3 +70,12 @@ def detail_meta_block(row):
         **Schlagworte:** {row.get("schlagworte", "")}
         """
     )
+
+def detail_bild_loeschen(
+    row,
+    user_email,
+):
+    detail_bild_loeschen(
+    row,
+    user_email,
+)
