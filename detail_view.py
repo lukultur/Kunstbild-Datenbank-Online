@@ -1,12 +1,9 @@
 import requests
 import streamlit as st
 
-from gallery_view import bild_loeschen
-from storage import bild_html
-from trash import soft_delete_werk
 from permissions import can_manage_artwork
-from filter_utils import kurzer_titel
-from activity import log_activity
+from trash import soft_delete_werk
+
 
 def detail_bild_download_laden(bildpfad):
     try:
@@ -17,6 +14,7 @@ def detail_bild_download_laden(bildpfad):
 
     except Exception:
         return None
+
 
 def detail_download_button(
     row,
@@ -31,6 +29,7 @@ def detail_download_button(
         use_container_width=True,
     )
 
+
 def detail_darf_bearbeiten(
     row,
     rolle,
@@ -42,14 +41,6 @@ def detail_darf_bearbeiten(
         user_email,
     )
 
-def detail_download_button(
-    row,
-    bild_download,
-):
-    detail_download_button(
-    row,
-    bild_download,
-)
 
 def detail_meta_block(row):
     st.markdown(
@@ -71,15 +62,20 @@ def detail_meta_block(row):
         """
     )
 
+
 def detail_bild_loeschen(
     row,
     user_email,
 ):
-    detail_bild_loeschen(
-    row,
-    user_email,
-)
+    soft_delete_werk(
+        row,
+        user_email,
+        "Detailansicht",
+    )
+
 
 def detail_bild_anzeigen(bild_url):
-    detail_bild_anzeigen(bild_url)
+    st.image(
+        bild_url,
+        use_container_width=True,
     )
