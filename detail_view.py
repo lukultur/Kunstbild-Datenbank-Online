@@ -40,3 +40,12 @@ def detail_darf_bearbeiten(
         rolle,
         user_email,
     )
+
+def detail_download_button(
+    row,
+    bild_download,
+):
+    detail_download_button(
+    row,
+    bild_download,
+)
