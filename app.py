@@ -53,6 +53,13 @@ from gallery_view import (
     bild_meta_block,
 )
 
+from detail_view import (
+    detail_download_button,
+    detail_bild_download_laden,
+    detail_darf_bearbeiten,
+detail_meta_block,
+)
+
 from permissions import (
     normalize_role,
     is_admin,
@@ -395,18 +402,7 @@ else:
             with col2:
                 st.header(str(row.get("titel", "")))
 
-                st.write(f"**Künstler:** {row.get('kuenstler', '')}")
-                st.write(f"**Jahr:** {row.get('jahr', '')}")
-                st.write(f"**Technik:** {row.get('technik', '')}")
-                st.write(f"**Maße:** {row.get('masse', '')}")
-                st.write(f"**Standort:** {row.get('standort', '')}")
-                st.write(f"**Rechte:** {row.get('rechte', '')}")
-                st.write(f"**Besitzer:** {row.get('owner_email', '')}")
-                st.write(f"**Stil / Epoche:** {row.get('stile', '')}")
-                st.write(f"**Techniken:** {row.get('techniken', '')}")
-                st.write(f"**Gattung / Motiv:** {row.get('gattungen', '')}")
-                st.write(f"**Beschreibung:** {row.get('beschreibung', '')}")
-                st.write(f"**Schlagworte:** {row.get('schlagworte', '')}")
+                detail_meta_block(row)
 
                 if darf_admin:
                     st.divider()
